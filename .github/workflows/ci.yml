@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # El esquema y las políticas de RLS se prueban contra un Postgres real,
+      # no se asumen. Ver scripts/verify-schema.mjs.
+      - name: Verificar esquema y RLS
+        run: npm run verify:schema
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Que la app empaquete es parte de "no romper producción": un error de
+      # resolución de módulos no lo detecta el typecheck.
+      - name: Empaquetar la app móvil
+        working-directory: apps/mobile
+        run: npx expo export --platform ios --output-dir /tmp/bundle-check

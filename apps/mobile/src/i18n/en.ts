@@ -1,0 +1,67 @@
+import type { Translations } from './es';
+
+export const en: Translations = {
+  tabs: { home: 'Today', friends: 'Friends', rankings: 'Ranking', profile: 'Profile' },
+  home: {
+    lockedTitle: 'Something happens today',
+    lockedBody: "At some point today we'll tell you what to photograph.",
+    openTitle: "Today's challenge",
+    photograph: 'Photograph',
+    openCamera: 'Open camera',
+    timeLeft: 'Time left',
+    completedTitle: 'Challenge complete',
+    yourPhoto: 'Your photo today',
+    reviewingTitle: "We're reviewing your photo",
+    reviewingBody: 'Your streak is safe while we check.',
+    missedTitle: "Today's challenge is over",
+    missedBody: "There's another one tomorrow. Turn on notifications so you don't miss it.",
+    seeFriends: 'See your friends',
+    friendsToday: 'Today',
+  },
+  streak: {
+    days_one: '{{count}} day', days_other: '{{count}} days',
+    best: 'Best streak', protected: 'Streak protected', protectionsLeft: 'Protectors: {{count}}',
+  },
+  rankings: {
+    global: 'Global', country: 'Country', friends: 'Friends',
+    yourPosition: 'Your position', notParticipating: "You're not showing in this ranking",
+    enable: 'Show me in the ranking', updatedAt: 'Updated {{time}}',
+  },
+  friends: {
+    title: 'Friends', requests: 'Requests', findContacts: 'Find contacts',
+    search: 'Search by username', add: 'Add', pending: 'Pending',
+    accept: 'Accept', reject: 'Decline', remove: 'Remove', block: 'Block',
+  },
+  profile: {
+    completed: 'Challenges completed', myStory: 'My story', achievements: 'Achievements',
+    settings: 'Settings', friendCount_one: '{{count}} friend', friendCount_other: '{{count}} friends',
+  },
+  empty: {
+    noFriendsTitle: 'No friends here yet',
+    noFriendsBody: 'Mira gets good once you can see what everyone else shot.',
+    noFriendsAction: 'Find contacts',
+    noPhotosTitle: 'Your story starts tomorrow',
+    noPhotosBody: 'Every photo you post lands here.',
+    noRankingTitle: 'No positions yet',
+    noRankingBody: 'Complete your first challenge to enter the ranking.',
+    noRequestsTitle: 'No pending requests',
+  },
+  errors: {
+    offline: "Looks like you're offline. Check your connection and try again.",
+    uploadFailed: "We couldn't upload your photo. Check your connection and try again.",
+    visionUnavailable: "We couldn't analyse your photo right now. We saved it and will check shortly — your streak is safe.",
+    challengeClosed: "Today's challenge is over.",
+    alreadyCompleted: "You've already completed today's challenge.",
+    attemptsExhausted: "You're out of attempts for today.",
+    cameraPermission: 'Mira needs the camera for the challenge. You can enable it in Settings.',
+    contactsPermission: 'We need permission to search your contacts. You can enable it in Settings.',
+    notificationsOff: "Without notifications you won't hear about the daily challenge.",
+    rateLimited: "You're going too fast. Try again in a bit.",
+    sessionExpired: 'Your session expired. Please sign in again.',
+    generic: 'Something went wrong. Try again in a moment.',
+  },
+  common: {
+    retry: 'Retry', cancel: 'Cancel', continue: 'Continue', done: 'Done',
+    settings: 'Settings', loading: 'Loading…',
+  },
+};

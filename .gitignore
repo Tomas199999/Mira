@@ -1,0 +1,48 @@
+# dependencias
+node_modules/
+.pnp/
+.pnp.js
+
+# builds
+dist/
+build/
+.next/
+out/
+.expo/
+.expo-shared/
+*.tsbuildinfo
+
+# entorno — NUNCA commitear secretos reales
+.env
+.env.*
+!.env.example
+
+# nativo
+ios/
+android/
+*.ipa
+*.apk
+*.aab
+*.keystore
+*.p8
+*.p12
+*.mobileprovision
+
+# supabase local
+supabase/.branches/
+supabase/.temp/
+
+# sistema
+.DS_Store
+*.log
+npm-debug.log*
+coverage/
+
+# herramientas
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+.vercel
+.env*
+!.env.example

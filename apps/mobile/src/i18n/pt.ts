@@ -1,0 +1,67 @@
+import type { Translations } from './es';
+
+export const pt: Translations = {
+  tabs: { home: 'Hoje', friends: 'Amigos', rankings: 'Ranking', profile: 'Perfil' },
+  home: {
+    lockedTitle: 'Hoje vai acontecer algo',
+    lockedBody: 'Em algum momento do dia avisamos o que você precisa fotografar.',
+    openTitle: 'Desafio de hoje',
+    photograph: 'Fotografe',
+    openCamera: 'Abrir câmera',
+    timeLeft: 'Tempo restante',
+    completedTitle: 'Desafio concluído',
+    yourPhoto: 'Sua foto de hoje',
+    reviewingTitle: 'Estamos revisando sua foto',
+    reviewingBody: 'Sua sequência está garantida enquanto revisamos.',
+    missedTitle: 'O desafio de hoje terminou',
+    missedBody: 'Amanhã tem outro. Ative as notificações para não perder.',
+    seeFriends: 'Ver seus amigos',
+    friendsToday: 'Hoje',
+  },
+  streak: {
+    days_one: '{{count}} dia', days_other: '{{count}} dias',
+    best: 'Melhor sequência', protected: 'Sequência protegida', protectionsLeft: 'Protetores: {{count}}',
+  },
+  rankings: {
+    global: 'Mundial', country: 'Nacional', friends: 'Amigos',
+    yourPosition: 'Sua posição', notParticipating: 'Você não aparece neste ranking',
+    enable: 'Aparecer no ranking', updatedAt: 'Atualizado {{time}}',
+  },
+  friends: {
+    title: 'Amigos', requests: 'Solicitações', findContacts: 'Encontrar contatos',
+    search: 'Buscar por nome de usuário', add: 'Adicionar', pending: 'Pendente',
+    accept: 'Aceitar', reject: 'Recusar', remove: 'Remover', block: 'Bloquear',
+  },
+  profile: {
+    completed: 'Desafios concluídos', myStory: 'Minha história', achievements: 'Conquistas',
+    settings: 'Ajustes', friendCount_one: '{{count}} amigo', friendCount_other: '{{count}} amigos',
+  },
+  empty: {
+    noFriendsTitle: 'Você ainda não tem amigos aqui',
+    noFriendsBody: 'Mira fica bom quando você vê o que os outros fotografaram.',
+    noFriendsAction: 'Buscar contatos',
+    noPhotosTitle: 'Sua história começa amanhã',
+    noPhotosBody: 'Cada foto que você postar fica guardada aqui.',
+    noRankingTitle: 'Ainda sem posições',
+    noRankingBody: 'Conclua seu primeiro desafio para entrar no ranking.',
+    noRequestsTitle: 'Nenhuma solicitação pendente',
+  },
+  errors: {
+    offline: 'Parece que você está sem internet. Verifique a conexão e tente de novo.',
+    uploadFailed: 'Não conseguimos enviar sua foto. Verifique a conexão e tente novamente.',
+    visionUnavailable: 'Não conseguimos analisar sua foto agora. Guardamos ela e vamos revisar em breve — sua sequência está garantida.',
+    challengeClosed: 'O desafio de hoje já terminou.',
+    alreadyCompleted: 'Você já concluiu o desafio de hoje.',
+    attemptsExhausted: 'Suas tentativas de hoje acabaram.',
+    cameraPermission: 'Mira precisa da câmera para o desafio. Você pode ativar nos Ajustes.',
+    contactsPermission: 'Precisamos de permissão para buscar nos seus contatos. Você pode ativar nos Ajustes.',
+    notificationsOff: 'Sem notificações você não vai saber do desafio do dia.',
+    rateLimited: 'Você está indo rápido demais. Tente de novo daqui a pouco.',
+    sessionExpired: 'Sua sessão expirou. Entre novamente.',
+    generic: 'Algo deu errado. Tente de novo em um instante.',
+  },
+  common: {
+    retry: 'Tentar de novo', cancel: 'Cancelar', continue: 'Continuar', done: 'Pronto',
+    settings: 'Ajustes', loading: 'Carregando…',
+  },
+};

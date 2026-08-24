@@ -1,0 +1,32 @@
+{
+  "name": "mira",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Mira — desafío fotográfico diario con validación por IA",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build:shared": "npm run build --workspace @mira/shared",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "mobile": "npm run start --workspace @mira/mobile",
+    "web": "npm run dev --workspace @mira/web",
+    "db:reset": "supabase db reset",
+    "db:push": "supabase db push",
+    "db:diff": "supabase db diff -f",
+    "verify:schema": "node scripts/verify-schema.mjs"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "embedded-postgres": "^18.4.0-beta.17",
+    "pg": "^8.23.0",
+    "supabase": "^2.115.0",
+    "typescript": "^5.7.2"
+  }
+}
