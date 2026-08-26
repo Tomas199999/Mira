@@ -46,20 +46,23 @@ npm run mobile           # abre Expo
 ```
 
 `verify:schema` **no necesita Docker ni Postgres instalado**: levanta su propio
-cluster, aplica un shim de Supabase, corre las 12 migraciones y comprueba las
+cluster, aplica un shim de Supabase, corre las 16 migraciones y comprueba las
 políticas de seguridad conectándose como usuarios distintos. Después borra todo.
 
 **Si tocás una migración, agregá su aserción a `scripts/verify-schema.mjs`.**
-Y si tocás el contrato con la base desde la app, agregala a
-`scripts/verify-auth-flow.mjs`, que corre contra Supabase de verdad.
 Ese archivo es la prueba de que la privacidad funciona; una migración sin test
 es una regresión esperando pasar.
+
+Y si cambiás el contrato entre la app y la base, sumá la aserción a
+`scripts/verify-auth-flow.mjs`, que corre contra Supabase de verdad. Que la app
+compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
+26/08 pasaban el typecheck sin problema.
 
 ## Estado
 
 | Componente | Estado |
 |---|---|
-| Esquema y RLS | ✅ 28 tablas, 34 políticas, verificado (24/24) |
+| Esquema y RLS | ✅ 29 tablas, 37 políticas, verificado (47/47) |
 | Catálogo de objetos | ✅ 45 objetos con alias y criterios visuales |
 | Funciones de dominio (racha, rankings, desafío) | ✅ escritas y probadas |
 | Tipos compartidos y contrato de API | ✅ `packages/shared` |

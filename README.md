@@ -10,12 +10,12 @@ realmente ahí, y tu racha sigue viva.
 
 ## Estado
 
-**Fase 1 de 16.** Lo que está hecho está hecho de verdad; lo que falta, falta —
+**Fase 2 de 16.** Lo que está hecho está hecho de verdad; lo que falta, falta —
 no hay nada mockeado haciéndose pasar por funcional (§79 del brief).
 
 | Componente | Estado |
 |---|---|
-| Esquema de base de datos y RLS | ✅ escrito y **verificado** contra Postgres (24/24 aserciones) |
+| Esquema de base de datos y RLS | ✅ escrito y **verificado** contra Postgres (47/47 aserciones) |
 | Catálogo de objetos | ✅ 45 objetos curados, con alias y criterios visuales |
 | Funciones de dominio (racha, rankings, desafío) | ✅ escritas y probadas |
 | Tipos compartidos y contrato de API | ✅ |
@@ -32,6 +32,7 @@ no hay nada mockeado haciéndose pasar por funcional (§79 del brief).
 ```bash
 npm install
 npm run verify:schema     # levanta un Postgres embebido y prueba las políticas
+npm run verify:auth       # flujo de alta contra el Supabase real (necesita .env)
 npm run typecheck
 npm run mobile            # abre Expo
 ```
