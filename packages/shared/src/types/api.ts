@@ -10,7 +10,7 @@ import type {
   Achievement, ChallengeState, FeedItem, FriendRequest, FriendSummary,
   HistoryDay, IsoDate, OwnProfile, PublicProfile, RankingPage, RankingScope,
   ReactionType, ReportReason, Submission, UserSettings, Uuid,
-} from './domain.js';
+} from './domain';
 
 /** Toda respuesta de error usa esta forma. Ver §58: el usuario nunca ve un 500. */
 export interface ApiError {

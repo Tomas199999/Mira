@@ -39,7 +39,8 @@ detrás de `__DEV__` que permite ver cada estado del desafío sin backend.
 
 ```bash
 npm install
-npm run verify:schema    # levanta un Postgres embebido y prueba 24 propiedades de RLS
+npm run verify:schema    # Postgres embebido: 47 propiedades de RLS y permisos
+npm run verify:auth      # flujo de alta contra el Supabase real (necesita .env)
 npm run typecheck
 npm run mobile           # abre Expo
 ```
@@ -49,6 +50,8 @@ cluster, aplica un shim de Supabase, corre las 12 migraciones y comprueba las
 políticas de seguridad conectándose como usuarios distintos. Después borra todo.
 
 **Si tocás una migración, agregá su aserción a `scripts/verify-schema.mjs`.**
+Y si tocás el contrato con la base desde la app, agregala a
+`scripts/verify-auth-flow.mjs`, que corre contra Supabase de verdad.
 Ese archivo es la prueba de que la privacidad funciona; una migración sin test
 es una regresión esperando pasar.
 
@@ -62,7 +65,7 @@ es una regresión esperando pasar.
 | Tipos compartidos y contrato de API | ✅ `packages/shared` |
 | Diseño y navegación móvil | ✅ compila y empaqueta |
 | Infraestructura | ✅ Supabase (São Paulo) y Vercel creados |
-| **Auth, perfiles, onboarding** | ⬜ **Fase 2 — lo que sigue** |
+| Auth, perfiles, onboarding | 🟡 email/contraseña completo y verificado; falta Apple y Google |
 | Backend: API, cron, admin | ⬜ Fase 3 |
 | Cámara y subida | ⬜ Fase 5 |
 | Pipeline de IA y moderación | ⬜ Fase 4 |
@@ -101,6 +104,12 @@ Están razonadas en `docs/`. Cambiarlas es una conversación, no un commit.
   `packages/shared`. El `vercel.json` de la raíz ya lo resuelve.
 - **`vercel deploy` directo falla** con *"Cannot patch preview comments…"*. Hay
   que usar `vercel build` + `vercel deploy --prebuilt`. Ver `docs/DEPLOYMENT.md`.
+- **La sesión de Supabase no entra en SecureStore de una pieza.** El límite es
+  ~2048 bytes y una sesión lo supera, así que `src/services/secure-storage.ts`
+  la fragmenta. Sin eso el usuario se desloguea solo, de forma intermitente.
+- **Los imports internos de `packages/shared` van sin extensión.** Con `.js`
+  TypeScript compila igual pero Metro no resuelve, y el error aparece recién
+  al empaquetar.
 - **El diccionario base de i18n no lleva `as const`**: con literales fijos
   ninguna traducción puede asignarse al tipo `Translations`.
 
