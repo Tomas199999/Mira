@@ -161,6 +161,114 @@ async function main() {
       check('un usuario NO puede cambiarse el username por su cuenta', err !== null);
     });
 
+    // §61 — el agujero de la migración 0013: el cliente tampoco puede CREAR
+    // un perfil con la racha ya inflada. UPDATE estaba acotado, INSERT no.
+    const intruder = (await client.query('insert into auth.users (email) values ($1) returning id',
+      ['intruder@test.local'])).rows[0].id;
+
+    await asUser(client, intruder, async () => {
+      const err = await expectError(() => client.query(
+        `insert into profiles (id, username, display_name, current_streak, best_streak)
+         values ($1, 'tramposo', 'Tramposo', 9999, 9999)`, [intruder]));
+      check('un usuario NO puede crear su perfil con la racha inflada', err !== null,
+        'el insert fue aceptado');
+    });
+
+    await asUser(client, intruder, async () => {
+      const err = await expectError(() => client.query(
+        `insert into profiles (id, username, display_name) values ($1, 'normalito', 'Normal')`,
+        [intruder]));
+      check('el cliente NO puede insertar perfiles ni con valores inocentes', err !== null);
+    });
+
+    // …y el alta legítima pasa por la función del servidor.
+    await asUser(client, intruder, async () => {
+      await client.query(
+        `select create_user_profile('nuevousuario', 'Nuevo', '1998-03-03'::date, 'AR', 'UTC', 'es')`);
+      const { rows } = await client.query(
+        'select username, current_streak from profiles where id = $1', [intruder]);
+      check('create_user_profile crea el perfil con la racha en cero',
+        rows.length === 1 && rows[0].username === 'nuevousuario' && rows[0].current_streak === 0,
+        JSON.stringify(rows[0] ?? null));
+
+      const { rows: priv } = await client.query(
+        'select age_band from user_private where user_id = $1', [intruder]);
+      const { rows: sets } = await client.query(
+        'select photo_visibility from user_settings where user_id = $1', [intruder]);
+      check('el alta es atómica: crea también los datos privados y los ajustes',
+        priv.length === 1 && sets.length === 1 && sets[0].photo_visibility === 'friends');
+    });
+
+    // Validaciones que no pueden quedar del lado del cliente.
+    const mkBareUser = async (email) =>
+      (await client.query('insert into auth.users (email) values ($1) returning id', [email])).rows[0].id;
+
+    // Ojo: asUser corre dentro de una transacción con rollback, así que el
+    // perfil creado más arriba no persiste. Se prueba contra 'alice', que sí
+    // quedó commiteada por el sembrado de datos.
+    const dupUser = await mkBareUser('dup@test.local');
+    await asUser(client, dupUser, async () => {
+      const err = await expectError(() => client.query(
+        `select create_user_profile('alice', 'Otro', '1998-01-01'::date, 'AR', 'UTC', 'es')`));
+      check('no se puede tomar un username ya usado', err !== null && /username_taken/.test(err.message),
+        err ? err.message : 'fue aceptado');
+    });
+
+    const resUser = await mkBareUser('res@test.local');
+    await asUser(client, resUser, async () => {
+      const err = await expectError(() => client.query(
+        `select create_user_profile('admin', 'Admin', '1998-01-01'::date, 'AR', 'UTC', 'es')`));
+      check('no se puede tomar un username reservado', err !== null && /username_reserved/.test(err.message));
+    });
+
+    const youngUser = await mkBareUser('young@test.local');
+    await asUser(client, youngUser, async () => {
+      const err = await expectError(() => client.query(
+        `select create_user_profile('chiquito', 'Chico', '2016-01-01'::date, 'AR', 'UTC', 'es')`));
+      check('se rechaza a quien no llega a la edad mínima', err !== null && /age_restricted/.test(err.message));
+    });
+
+    // La edad mínima sube a 16 en el Espacio Económico Europeo (GDPR art. 8).
+    const eeaUser = await mkBareUser('eea@test.local');
+    const fourteen = new Date(Date.now() - 14 * 365.25 * 86400000).toISOString().slice(0, 10);
+    await asUser(client, eeaUser, async () => {
+      const err = await expectError(() => client.query(
+        `select create_user_profile('europeo', 'Euro', $1::date, 'ES', 'UTC', 'es')`, [fourteen]));
+      check('en el EEE la edad mínima sube a 16', err !== null && /age_restricted/.test(err.message),
+        err ? err.message : 'fue aceptado');
+    });
+    const arUser = await mkBareUser('ar@test.local');
+    await asUser(client, arUser, async () => {
+      await client.query(
+        `select create_user_profile('argentino', 'Arg', $1::date, 'AR', 'UTC', 'es')`, [fourteen]);
+      const { rows } = await client.query('select 1 from profiles where id = $1', [arUser]);
+      check('fuera del EEE, con 14 años sí se puede', rows.length === 1);
+    });
+
+    // §15 — una solicitud de amistad nace pendiente, no aceptada.
+    await asUser(client, alice, async () => {
+      const err = await expectError(() => client.query(
+        `insert into friend_requests (requester_id, addressee_id, status)
+         values ($1, $2, 'accepted')`, [alice, bob]));
+      check('no se puede crear una solicitud de amistad ya aceptada', err !== null);
+    });
+
+    // §23 — un reporte nace abierto, no resuelto.
+    await asUser(client, alice, async () => {
+      const err = await expectError(() => client.query(
+        `insert into reports (reporter_id, reported_user_id, reason, status)
+         values ($1, $2, 'spam', 'dismissed')`, [alice, bob]));
+      check('no se puede crear un reporte ya desestimado', err !== null);
+    });
+
+    // Defensa en profundidad: anon no escribe en ninguna tabla.
+    const { rows: anonWrites } = await client.query(
+      `select count(*)::int as n from information_schema.table_privileges
+        where table_schema='public' and grantee='anon'
+          and privilege_type in ('INSERT','UPDATE','DELETE')`);
+    check('el rol anónimo no tiene ningún permiso de escritura', anonWrites[0].n === 0,
+      `tiene ${anonWrites[0].n}`);
+
     // §18 — los datos privados no salen de la propia fila.
     await asUser(client, bob, async () => {
       const { rows } = await client.query('select * from user_private where user_id = $1', [alice]);
@@ -287,9 +395,37 @@ async function main() {
       check('la config pública no expone los umbrales de IA',
         keys.includes('max_upload_attempts') && !keys.includes('ai_confidence_accept'),
         keys.join(','));
+      // app_config ahora tiene una política de SELECT acotada a las claves
+      // públicas, para que la vista pueda ser security_invoker. Lo que importa
+      // es que las claves privadas sigan siendo invisibles.
       const { rows: raw } = await client.query('select key from app_config');
-      check('la tabla app_config completa NO es legible por usuarios', raw.length === 0, `leyó ${raw.length}`);
+      const leidas = raw.map(r => r.key);
+      check('los umbrales de IA no son legibles ni consultando app_config directo',
+        !leidas.some(k => k.startsWith('ai_') || k.startsWith('rate_limit_')),
+        leidas.join(','));
     });
+
+    // La vulnerabilidad de la migración 0014: una vista simple sobre una tabla
+    // con RLS es actualizable, y si no es security_invoker corre con los
+    // permisos de su dueño y saltea las políticas por completo.
+    const { rows: views } = await client.query(
+      `select c.relname,
+              coalesce((select option_value from pg_options_to_table(c.reloptions)
+                         where option_name = 'security_invoker'), 'off') as invoker
+         from pg_class c join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public' and c.relkind = 'v'`);
+    check('toda vista sobre una tabla con RLS es security_invoker',
+      views.every(v => v.invoker === 'on' || v.invoker === 'true'),
+      views.map(v => `${v.relname}=${v.invoker}`).join(', '));
+
+    // Y aunque alguien re-otorgue los grants, nadie escribe la configuración.
+    const { rows: cfgWrites } = await client.query(
+      `select count(*)::int as n from information_schema.table_privileges
+        where table_schema='public' and grantee in ('anon','authenticated')
+          and table_name in ('app_config','public_app_config')
+          and privilege_type in ('INSERT','UPDATE','DELETE')`);
+    check('nadie puede escribir la configuración remota desde el cliente',
+      cfgWrites[0].n === 0, `hay ${cfgWrites[0].n} permisos`);
 
   } finally {
     await client.end();

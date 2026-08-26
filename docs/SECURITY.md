@@ -124,7 +124,42 @@ ejecuta el borrado. Se elimina el contenido y los datos personales; lo que deba
 conservarse por obligación legal queda anonimizado y documentado en la política
 de retención.
 
-## 9. Pendiente
+## 9. Hallazgos y correcciones
+
+Se registran acá porque el patrón se repite y conviene tenerlo a mano.
+
+### Vistas actualizables que saltean RLS (26/08/2026, grave)
+
+`public_app_config` era una vista simple sobre `app_config`. En Postgres eso la
+vuelve **automáticamente actualizable**, y al no ser `security_invoker` las
+escrituras corrían con los permisos de su dueño, salteando el RLS de la tabla.
+Con los grants por defecto de Supabase, cualquiera con la clave publicable — que
+viaja dentro del binario de la app y por lo tanto es pública — podía reescribir
+los umbrales de la IA, los límites de rate limiting y la edad mínima.
+
+Verificado explotándolo: un `PATCH` sin sesión cambió `feed_page_size` de 20 a
+999. Corregido en la migración 0014, en dos capas: la vista pasó a
+`security_invoker` y la tabla ganó una política de `SELECT` acotada a las claves
+públicas, más el revoke de toda escritura.
+
+**Regla que queda:** toda vista sobre una tabla con RLS se declara
+`security_invoker`. Lo verifica una aserción de `verify-schema.mjs`.
+
+### INSERT sin acotar por columna (26/08/2026)
+
+La migración 0002 revocó `UPDATE` sobre `profiles` y lo re-otorgó por columna,
+pero dejó `INSERT` abierto a las 13 columnas. Con la política `profiles_insert_self`
+un usuario podía **crear** su perfil con `current_streak = 9999` y saltearse la
+validación de username. Era el mismo agujero de §61, entrando por la otra puerta.
+
+Corregido en la migración 0013: el cliente perdió el `INSERT` sobre `profiles` y
+el alta pasa por `create_user_profile()`, que valida formato, reservados,
+unicidad y edad mínima, y crea las tres filas en una sola transacción.
+
+**Regla que queda:** acotar un privilegio de escritura obliga a revisar los
+cuatro (`SELECT`, `INSERT`, `UPDATE`, `DELETE`), no sólo el que motivó el cambio.
+
+## 10. Pendiente
 
 Estas piezas están diseñadas pero **no implementadas** todavía (Fases 3–4):
 
