@@ -351,6 +351,98 @@ async function main() {
     check('toda función SECURITY DEFINER tiene search_path fijo',
       mutable.length === 0, mutable.map(r => r.proname).join(', '));
 
+    // ---- modelo temporal (§5, §43) -----------------------------------------
+    // Es la parte más riesgosa del diseño: un objeto global por fecha, pero la
+    // ventana de cada usuario sorteada dentro de SU franja horaria local.
+    const futureDate = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
+    await client.query('select schedule_daily_challenge($1::date)', [futureDate]);
+
+    const tzUser = async (username, tz) => {
+      const id = (await client.query('insert into auth.users (email) values ($1) returning id',
+        [`${username}@test.local`])).rows[0].id;
+      await client.query(
+        'insert into profiles (id, username, display_name, country_code) values ($1,$2,$3,$4)',
+        [id, username, username, 'AR']);
+      await client.query('insert into user_private (user_id, birth_date, timezone) values ($1,$2,$3)',
+        [id, '1995-01-01', tz]);
+      await client.query('insert into user_settings (user_id) values ($1)', [id]);
+      return id;
+    };
+
+    const tokyo  = await tzUser('tokio',  'Asia/Tokyo');
+    const madrid = await tzUser('madrid', 'Europe/Madrid');
+
+    const { rows: [made] } = await client.query(
+      'select create_challenge_windows($1::date) as n', [futureDate]);
+    check('se crea una ventana por usuario activo en un solo pase', made.n >= 3, `creó ${made.n}`);
+
+    // Cada ventana tiene que caer dentro de la franja LOCAL del usuario.
+    const { rows: windows } = await client.query(`
+      select w.timezone,
+             (w.opens_at  at time zone w.timezone)::time as abre_local,
+             (w.closes_at at time zone w.timezone)::time as cierra_local,
+             (w.opens_at  at time zone w.timezone)::date as fecha_local,
+             w.opens_at
+        from challenge_windows w
+       where w.challenge_date = $1::date`, [futureDate]);
+
+    const dentroDeFranja = windows.every(w => {
+      const abre = w.abre_local.slice(0, 5);
+      const cierra = w.cierra_local.slice(0, 5);
+      return abre >= '10:00' && cierra <= '22:00';
+    });
+    check('toda ventana cae dentro de la franja local 10:00–22:00',
+      windows.length > 0 && dentroDeFranja,
+      windows.map(w => `${w.timezone} ${w.abre_local}–${w.cierra_local}`).join(' | '));
+
+    check('la fecha local de la ventana es el día del desafío',
+      windows.every(w => w.fecha_local.toISOString().slice(0, 10) === futureDate),
+      windows.map(w => w.fecha_local.toISOString().slice(0, 10)).join(','));
+
+    // La misma franja local corresponde a instantes absolutos distintos según
+    // el huso. Se compara el ARRANQUE de la franja, que es determinista; dos
+    // sorteos aleatorios pueden coincidir por azar y no probarían nada.
+    const { rows: [franjas] } = await client.query(`
+      select extract(epoch from
+               (($1::date + interval '10 hours') at time zone 'Europe/Madrid')
+             - (($1::date + interval '10 hours') at time zone 'Asia/Tokyo')
+             ) / 3600 as horas_de_diferencia`, [futureDate]);
+    check('las 10:00 locales son instantes distintos según el huso',
+      Math.abs(Number(franjas.horas_de_diferencia)) === 7,
+      `dio ${franjas.horas_de_diferencia} horas`);
+
+    // El bug de la migración 0018: con ventanas futuras ya creadas,
+    // get_active_challenge() devolvía la de mayor fecha en vez de la de hoy.
+    await asUser(client, alice, async () => {
+      const { rows } = await client.query('select challenge_date from get_active_challenge()');
+      const hoy = new Date().toISOString().slice(0, 10);
+      check('get_active_challenge nunca devuelve una ventana futura',
+        rows.length === 1 && rows[0].challenge_date.toISOString().slice(0, 10) <= hoy,
+        rows.length ? rows[0].challenge_date.toISOString().slice(0, 10) : 'sin filas');
+    });
+
+    // El cron se reintenta: correrlo dos veces no puede duplicar ni re-sortear.
+    const { rows: [again] } = await client.query(
+      'select create_challenge_windows($1::date) as n', [futureDate]);
+    check('crear las ventanas dos veces no duplica ninguna', again.n === 0, `creó ${again.n} de más`);
+
+    // El cambio de zona horaria pedido ayer rige hoy, no antes.
+    await client.query(
+      `update user_private set pending_timezone = 'America/Sao_Paulo',
+              timezone_effective_on = current_date + 1 where user_id = $1`, [tokyo]);
+    await client.query('select promote_pending_timezones(current_date)');
+    const { rows: [notYet] } = await client.query(
+      'select timezone from user_private where user_id = $1', [tokyo]);
+    check('un cambio de huso con fecha futura todavía no se aplica',
+      notYet.timezone === 'Asia/Tokyo', notYet.timezone);
+
+    await client.query('select promote_pending_timezones((current_date + 1)::date)');
+    const { rows: [nowYes] } = await client.query(
+      'select timezone, pending_timezone from user_private where user_id = $1', [tokyo]);
+    check('al llegar la fecha, el cambio de huso se aplica y se limpia',
+      nowYes.timezone === 'America/Sao_Paulo' && nowYes.pending_timezone === null,
+      JSON.stringify(nowYes));
+
     // §18 — los datos privados no salen de la propia fila.
     await asUser(client, bob, async () => {
       const { rows } = await client.query('select * from user_private where user_id = $1', [alice]);

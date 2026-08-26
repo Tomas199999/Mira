@@ -21,7 +21,8 @@
     "db:push": "supabase db push",
     "db:diff": "supabase db diff -f",
     "verify:schema": "node scripts/verify-schema.mjs",
-    "verify:auth": "node --env-file=.env scripts/verify-auth-flow.mjs"
+    "verify:auth": "node --env-file=.env scripts/verify-auth-flow.mjs",
+    "verify:api": "node --env-file=.env scripts/verify-api.mjs"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",

@@ -41,6 +41,7 @@ detrás de `__DEV__` que permite ver cada estado del desafío sin backend.
 npm install
 npm run verify:schema    # Postgres embebido: 47 propiedades de RLS y permisos
 npm run verify:auth      # flujo de alta contra el Supabase real (necesita .env)
+npm run verify:api       # API del desafío; levantá antes el server local en :3210
 npm run typecheck
 npm run mobile           # abre Expo
 ```
@@ -62,14 +63,15 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 
 | Componente | Estado |
 |---|---|
-| Esquema y RLS | ✅ 29 tablas, 37 políticas, verificado (47/47) |
+| Esquema y RLS | ✅ 29 tablas, 37 políticas, verificado (55/55) |
 | Catálogo de objetos | ✅ 45 objetos con alias y criterios visuales |
 | Funciones de dominio (racha, rankings, desafío) | ✅ escritas y probadas |
 | Tipos compartidos y contrato de API | ✅ `packages/shared` |
 | Diseño y navegación móvil | ✅ compila y empaqueta |
 | Infraestructura | ✅ Supabase (São Paulo) y Vercel creados |
 | Auth, perfiles, onboarding | 🟡 email/contraseña completo y verificado; falta Apple y Google |
-| Backend: API, cron, admin | ⬜ Fase 3 |
+| Backend: desafío diario y cron | 🟡 `GET /api/challenge` y los dos jobs, verificados; falta el resto de la API |
+| Backend: panel admin | ⬜ Fase 10 |
 | Cámara y subida | ⬜ Fase 5 |
 | Pipeline de IA y moderación | ⬜ Fase 4 |
 | Amigos, contactos, feed | ⬜ Fases 6–7 |
@@ -110,6 +112,8 @@ Están razonadas en `docs/`. Cambiarlas es una conversación, no un commit.
 - **La sesión de Supabase no entra en SecureStore de una pieza.** El límite es
   ~2048 bytes y una sesión lo supera, así que `src/services/secure-storage.ts`
   la fragmenta. Sin eso el usuario se desloguea solo, de forma intermitente.
+- **Vercel Cron invoca con `GET`, no con `POST`.** Una ruta que exporta sólo
+  `POST` devuelve 405 todas las noches sin que nadie se entere.
 - **Los imports internos de `packages/shared` van sin extensión.** Con `.js`
   TypeScript compila igual pero Metro no resuelve, y el error aparece recién
   al empaquetar.

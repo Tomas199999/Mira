@@ -84,7 +84,12 @@ export type ChallengeState =
       kind: 'completed';
       challengeDate: IsoDate;
       objectDisplayName: string;
-      submission: Submission;
+      /**
+       * La publicación con sus URLs firmadas. Puede venir `null` si el estado
+       * se resolvió sin cargarla; la app dibuja el estado igual y pide la foto
+       * aparte. Es preferible a forzar el tipo con un `as never`.
+       */
+      submission: Submission | null;
       currentStreak: number;
     }
   | {

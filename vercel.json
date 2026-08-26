@@ -3,5 +3,15 @@
   "framework": "nextjs",
   "installCommand": "npm install",
   "buildCommand": "npm run build --workspace @mira/web",
-  "outputDirectory": "apps/web/.next"
+  "outputDirectory": "apps/web/.next",
+  "crons": [
+    {
+      "path": "/api/cron/schedule-challenges",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/close-day",
+      "schedule": "0 14 * * *"
+    }
+  ]
 }
