@@ -47,7 +47,7 @@ npm run mobile           # abre Expo
 ```
 
 `verify:schema` **no necesita Docker ni Postgres instalado**: levanta su propio
-cluster, aplica un shim de Supabase, corre las 16 migraciones y comprueba las
+cluster, aplica un shim de Supabase, corre las 18 migraciones y comprueba las
 políticas de seguridad conectándose como usuarios distintos. Después borra todo.
 
 **Si tocás una migración, agregá su aserción a `scripts/verify-schema.mjs`.**
