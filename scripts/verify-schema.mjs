@@ -269,6 +269,88 @@ async function main() {
     check('el rol anónimo no tiene ningún permiso de escritura', anonWrites[0].n === 0,
       `tiene ${anonWrites[0].n}`);
 
+    // §16 — suplantación por hash de teléfono: si el cliente puede escribir
+    // phone_hash, puede poner el de otra persona y aparecer cuando los
+    // contactos de esa persona la buscan.
+    await asUser(client, alice, async () => {
+      const err = await expectError(() => client.query(
+        `update user_private set phone_hash = decode('deadbeef','hex') where user_id = $1`, [alice]));
+      check('un usuario NO puede escribir su hash de teléfono', err !== null,
+        'el update fue aceptado');
+    });
+
+    // §29 — la fecha de nacimiento no se edita: si se pudiera, un menor
+    // desactivaría las protecciones que el trigger le aplicó al registrarse.
+    await asUser(client, alice, async () => {
+      const err = await expectError(() => client.query(
+        `update user_private set birth_date = '1980-01-01' where user_id = $1`, [alice]));
+      check('un usuario NO puede cambiarse la fecha de nacimiento', err !== null);
+    });
+
+    // §5 — la zona horaria no se escribe directo: se pide, y rige mañana.
+    await asUser(client, alice, async () => {
+      const err = await expectError(() => client.query(
+        `update user_private set timezone = 'Pacific/Auckland', timezone_effective_on = current_date
+          where user_id = $1`, [alice]));
+      check('un usuario NO puede cambiar su zona horaria de forma inmediata', err !== null);
+    });
+
+    await asUser(client, alice, async () => {
+      const { rows } = await client.query(
+        `select request_timezone_change('Europe/Madrid') as efectiva`);
+      const hoy = new Date().toISOString().slice(0, 10);
+      check('el cambio de zona horaria se difiere al día siguiente',
+        rows[0].efectiva.toISOString().slice(0, 10) > hoy,
+        String(rows[0].efectiva));
+    });
+
+    await asUser(client, alice, async () => {
+      const err = await expectError(() => client.query(
+        `select request_timezone_change('Marte/Olympus')`));
+      check('se rechaza una zona horaria inexistente', err !== null && /timezone_invalid/.test(err.message));
+    });
+
+    // Las funciones de servidor no las puede invocar el cliente.
+    await asUser(client, alice, async () => {
+      const err = await expectError(() => client.query(
+        `select schedule_daily_challenge((current_date + 30)::date)`));
+      check('un usuario NO puede programar desafíos', err !== null && /permission denied/i.test(err.message),
+        err ? err.message : 'fue aceptado');
+    });
+
+    // §50 — la baja se pide; no se marca como completada.
+    await asUser(client, alice, async () => {
+      const err = await expectError(() => client.query(
+        `insert into account_deletion_requests (user_id, scheduled_for, completed_at)
+         values ($1, now(), now())`, [alice]));
+      check('un usuario NO puede marcar su propia baja como completada', err !== null);
+    });
+
+    // Ninguna función SECURITY DEFINER debe ser invocable sin sesión. Es la
+    // capa de permisos; el guard interno con auth.uid() es la segunda, no la
+    // única. Lo detectó el analizador de Supabase, no esta suite.
+    const { rows: exposed } = await client.query(`
+      select p.proname
+        from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and p.prosecdef
+         and (has_function_privilege('anon', p.oid, 'EXECUTE')
+              or pg_catalog.has_function_privilege('public', p.oid, 'EXECUTE'))
+       order by 1`);
+    check('ninguna función SECURITY DEFINER es invocable por anon o PUBLIC',
+      exposed.length === 0, exposed.map(r => r.proname).join(', '));
+
+    // Toda función SECURITY DEFINER necesita search_path fijo, o quien pueda
+    // crear objetos en un esquema anterior del path secuestra su cuerpo.
+    const { rows: mutable } = await client.query(`
+      select p.proname
+        from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and p.prosecdef
+         and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c
+                          where c like 'search_path=%')
+       order by 1`);
+    check('toda función SECURITY DEFINER tiene search_path fijo',
+      mutable.length === 0, mutable.map(r => r.proname).join(', '));
+
     // §18 — los datos privados no salen de la propia fila.
     await asUser(client, bob, async () => {
       const { rows } = await client.query('select * from user_private where user_id = $1', [alice]);

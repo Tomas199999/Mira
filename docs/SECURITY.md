@@ -159,6 +159,35 @@ unicidad y edad mínima, y crea las tres filas en una sola transacción.
 **Regla que queda:** acotar un privilegio de escritura obliga a revisar los
 cuatro (`SELECT`, `INSERT`, `UPDATE`, `DELETE`), no sólo el que motivó el cambio.
 
+### EXECUTE heredado de PUBLIC (26/08/2026)
+
+Lo detectó el analizador de Supabase, no esta suite de tests. `grant execute …
+to authenticated` **no revoca** el `EXECUTE` que Postgres le otorga a `PUBLIC`
+al crear una función, y `anon` hereda de `PUBLIC`. Las nueve funciones
+`SECURITY DEFINER` quedaron invocables sin sesión vía `/rest/v1/rpc/…`.
+
+Ninguna era explotable — todas cortan con `auth.uid()` nulo — salvo
+`is_username_available`, que permitía enumerar usernames sin cuenta. Pero
+depender del guard interno en lugar del permiso es el mismo error de una sola
+capa que causó el hallazgo de la vista. Corregido en la migración 0016, junto
+con el `search_path` fijo que faltaba en tres funciones.
+
+**Regla que queda:** exponer una función son dos pasos, no uno —
+`revoke execute … from public, anon` y después `grant execute … to authenticated`.
+
+### Funciones y avisos aceptados a conciencia
+
+El analizador sigue marcando dos cosas, y están bien así:
+
+- **Nueve funciones `SECURITY DEFINER` invocables por `authenticated`.** Son
+  justamente las que el cliente tiene que poder llamar: `get_active_challenge`,
+  `get_friends_ranking`, `create_user_profile`, `is_username_available`,
+  `request_timezone_change` y los cuatro helpers `viewer_*`. Todas comparan
+  contra `auth.uid()` y ninguna acepta un usuario arbitrario como parámetro.
+- **`citext` instalado en el esquema `public`.** Moverlo exigiría reescribir el
+  tipo de `profiles.username`, que es único y está referenciado. El riesgo de esa
+  migración supera al del aviso, que es de higiene y no una vulnerabilidad.
+
 ## 10. Pendiente
 
 Estas piezas están diseñadas pero **no implementadas** todavía (Fases 3–4):

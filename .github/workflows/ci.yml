@@ -21,6 +21,14 @@ jobs:
       - name: Verificar esquema y RLS
         run: npm run verify:schema
 
+      # El analizador de Supabase encontró lo que la suite propia no miraba.
+      # Corre sólo si hay credenciales; en un fork simplemente se saltea.
+      - name: Analizador de seguridad de Supabase
+        if: ${{ env.SUPABASE_ACCESS_TOKEN != '' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: npx supabase db advisors --linked --type security
+
       - name: Typecheck
         run: npm run typecheck
 
