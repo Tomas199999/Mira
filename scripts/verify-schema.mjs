@@ -843,6 +843,78 @@ async function main() {
         String(stats.s.participationRate));
     });
 
+    // ---- notificaciones (§6) --------------------------------------------------
+    const pushUser = await mkUser('notificado', '1990-01-01', 'AR');
+    const { rows: [pushWin] } = await client.query(
+      `insert into challenge_windows (user_id, daily_challenge_id, challenge_date, opens_at, closes_at, timezone)
+       values ($1, $2, ($3::date - 2), now() - interval '1 minute', now() + interval '60 minutes', 'UTC')
+       returning id`, [pushUser, ch.id, today]);
+
+    await asUser(client, pushUser, async () => {
+      await client.query(
+        "select register_push_token('ExponentPushToken[prueba1]', 'ios', 'dev-1', '0.1.0')");
+      const { rows } = await client.query(
+        'select token, is_valid from push_tokens where user_id = $1', [pushUser]);
+      check('registrar el token lo asocia a la cuenta',
+        rows.length === 1 && rows[0].is_valid === true, JSON.stringify(rows));
+    });
+    await client.query("select set_config('request.jwt.claim.sub', $1, false)", [pushUser]);
+    await client.query("select register_push_token('ExponentPushToken[prueba1]', 'ios', 'dev-1', '0.1.0')");
+
+    // El mismo token en otra cuenta se REASIGNA. Si se duplicara, el usuario
+    // anterior seguiría recibiendo las notificaciones de ese teléfono.
+    const otherPhone = await mkUser('otrotel', '1990-02-02', 'AR');
+    await client.query("select set_config('request.jwt.claim.sub', $1, false)", [otherPhone]);
+    await client.query("select register_push_token('ExponentPushToken[prueba1]', 'ios', 'dev-1', '0.1.0')");
+    const { rows: reassigned } = await client.query(
+      "select user_id from push_tokens where token = 'ExponentPushToken[prueba1]'");
+    check('un token que cambia de cuenta se reasigna, no se duplica',
+      reassigned.length === 1 && reassigned[0].user_id === otherPhone,
+      JSON.stringify(reassigned));
+
+    // Volver a dejarlo en el usuario de la ventana para probar el reclamo.
+    await client.query("select set_config('request.jwt.claim.sub', $1, false)", [pushUser]);
+    await client.query("select register_push_token('ExponentPushToken[prueba1]', 'ios', 'dev-1', '0.1.0')");
+
+    const { rows: claimed } = await client.query(
+      'select window_id, token, object_display from claim_due_challenge_notifications(100)');
+    check('el job reclama la ventana que acaba de abrir',
+      claimed.some(r => r.window_id === pushWin.id && r.token === 'ExponentPushToken[prueba1]'),
+      JSON.stringify(claimed.map(r => r.window_id)));
+    check('y trae el nombre del objeto para el texto',
+      claimed.find(r => r.window_id === pushWin.id)?.object_display?.length > 0);
+
+    // Reclamar dos veces no reenvía: es lo que hace seguro reintentar el cron.
+    const { rows: again2 } = await client.query(
+      'select window_id from claim_due_challenge_notifications(100)');
+    check('reclamar de nuevo no vuelve a tomar la misma ventana',
+      !again2.some(r => r.window_id === pushWin.id), JSON.stringify(again2.map(r => r.window_id)));
+
+    // Quien apagó la notificación del desafío no entra en la selección.
+    const optedOut = await mkUser('silencioso', '1990-03-03', 'AR');
+    await client.query('update user_settings set notify_daily_challenge = false where user_id = $1', [optedOut]);
+    await client.query("select set_config('request.jwt.claim.sub', $1, false)", [optedOut]);
+    await client.query("select register_push_token('ExponentPushToken[silencio]', 'ios', 'dev-2', '0.1.0')");
+    await client.query(
+      `insert into challenge_windows (user_id, daily_challenge_id, challenge_date, opens_at, closes_at, timezone)
+       values ($1, $2, ($3::date - 3), now() - interval '1 minute', now() + interval '60 minutes', 'UTC')`,
+      [optedOut, ch.id, today]);
+    const { rows: silent } = await client.query(
+      'select user_id from claim_due_challenge_notifications(100)');
+    check('quien apagó las notificaciones no recibe nada',
+      !silent.some(r => r.user_id === optedOut), JSON.stringify(silent.map(r => r.user_id)));
+
+    // Un token que falla tres veces se apaga solo.
+    await client.query("select record_push_failure('ExponentPushToken[silencio]')");
+    await client.query("select record_push_failure('ExponentPushToken[silencio]')");
+    const { rows: [stillOn] } = await client.query(
+      "select is_valid from push_tokens where token = 'ExponentPushToken[silencio]'");
+    check('dos fallos todavía no invalidan el token', stillOn.is_valid === true);
+    await client.query("select record_push_failure('ExponentPushToken[silencio]')");
+    const { rows: [nowOff] } = await client.query(
+      "select is_valid from push_tokens where token = 'ExponentPushToken[silencio]'");
+    check('al tercer fallo el token se apaga', nowOff.is_valid === false);
+
     // §18 — los datos privados no salen de la propia fila.
     await asUser(client, bob, async () => {
       const { rows } = await client.query('select * from user_private where user_id = $1', [alice]);

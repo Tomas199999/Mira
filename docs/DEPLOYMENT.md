@@ -45,7 +45,7 @@ Tres crons, todos con `CRON_SECRET`:
 | Job | Cadencia | Qué hace |
 |---|---|---|
 | `schedule-challenges` | diario, 00:15 UTC | sortea el objeto de los próximos días y crea las ventanas de cada usuario según su zona horaria |
-| `send-challenge-push` | cada 5 minutos | notifica a quienes les acaba de abrir la ventana |
+| `send-challenge-push` | cada 5 minutos | notifica a quienes les acaba de abrir la ventana. El peor retraso posible entre que abre y llega el aviso es de cinco minutos |
 | `close-day` | diario | corta rachas o gasta protectores, y materializa los rankings |
 
 ## App móvil

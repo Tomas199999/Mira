@@ -4,6 +4,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
+import { useNotifications } from '@/features/notifications/useNotifications';
 import { ThemeProvider, useTheme } from '@/theme';
 
 /**
@@ -17,6 +18,10 @@ import { ThemeProvider, useTheme } from '@/theme';
 function RootNavigator() {
   const theme = useTheme();
   const { state } = useAuth();
+
+  // Se registra recién cuando el usuario tiene perfil: pedir el permiso antes
+  // de que entienda para qué sirve es la forma más rápida de que diga que no.
+  useNotifications(state.status === 'ready');
 
   if (state.status === 'loading') {
     return (

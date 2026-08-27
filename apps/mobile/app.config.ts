@@ -57,6 +57,7 @@ const config: ExpoConfig = {
     'expo-secure-store',
     'expo-font',
     'expo-image',
+    'expo-notifications',
     'expo-contacts',
     'expo-camera',
     // TODO(marca): cuando existan el logo y el icono definitivos, agregar acá

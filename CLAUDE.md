@@ -63,7 +63,7 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 
 | Componente | Estado |
 |---|---|
-| Esquema y RLS | ✅ verificado (101/101) |
+| Esquema y RLS | ✅ verificado (109/109) |
 | Catálogo de objetos | ✅ 45 objetos con alias y criterios visuales |
 | Funciones de dominio (racha, rankings, desafío) | ✅ escritas y probadas |
 | Tipos compartidos y contrato de API | ✅ `packages/shared` |
@@ -79,7 +79,7 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 | Rankings | ✅ mundial, nacional y de amigos, con opt-out respetado |
 | Historial | ✅ calendario del mes con miniaturas |
 | Rachas | ✅ lógica, protectores y estadísticas del perfil |
-| Notificaciones push | ⬜ Fase 9 |
+| Notificaciones push | 🟡 backend y cron verificados; el envío real necesita un development build |
 
 ## Decisiones ya tomadas — no rediscutir
 
@@ -106,8 +106,9 @@ Están razonadas en `docs/`. Cambiarlas es una conversación, no un commit.
 
 ## Rarezas de la plataforma que ya costaron tiempo
 
-- **App Attest y Play Integrity no funcionan en Expo Go.** El flujo de subida
-  necesita *development builds* de EAS. No es opcional.
+- **App Attest, Play Integrity y las notificaciones push no funcionan en
+  Expo Go.** El flujo de subida y el registro del token de push necesitan
+  *development builds* de EAS. No es opcional.
 - **Vercel se linkea desde la raíz del monorepo**, no desde `apps/web`. Desde
   `apps/web` el build falla: quedan afuera `tsconfig.base.json` y
   `packages/shared`. El `vercel.json` de la raíz ya lo resuelve.
