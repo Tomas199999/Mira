@@ -123,6 +123,10 @@ Están razonadas en `docs/`. Cambiarlas es una conversación, no un commit.
 - **La sesión de Supabase no entra en SecureStore de una pieza.** El límite es
   ~2048 bytes y una sesión lo supera, así que `src/services/secure-storage.ts`
   la fragmenta. Sin eso el usuario se desloguea solo, de forma intermitente.
+- **Expo lee el `.env` del directorio de la app, no el de la raíz del
+  monorepo.** Por eso `npm run mobile` pasa por `scripts/mobile.mjs`, que genera
+  `apps/mobile/.env.local`. Arrancar con `npx expo start` a secas deja la app sin
+  credenciales de Supabase y muere en el primer render.
 - **RLS impide usar índices cuando la política no es LEAKPROOF.** Para una
   consulta que sólo devuelve datos propios, usá `SECURITY DEFINER` con
   `where user_id = auth.uid()` explícito. Ver `docs/ARCHITECTURE.md § 7 bis`.

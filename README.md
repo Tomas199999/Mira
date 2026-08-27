@@ -29,12 +29,23 @@ no hay nada mockeado haciéndose pasar por funcional (§79 del brief).
 
 ## Probarlo en el teléfono
 
+Dos terminales. En la primera:
+
 ```bash
-npm run demo
+npm run demo      # backend en la máquina, contra Supabase de producción
 ```
 
-Levanta el backend en la máquina y te dice con qué comando abrir la app
-apuntando a la IP de tu red local — el teléfono no puede resolver `localhost`.
+En la segunda:
+
+```bash
+npm run mobile    # abre Expo con el QR
+```
+
+`npm run mobile` genera `apps/mobile/.env.local` a partir del `.env` de la raíz
+y completa solo la IP de tu red local. Expo lee el `.env` del directorio de la
+app, no el de la raíz del monorepo: sin ese paso la app arranca y muere en el
+primer render porque el cliente de Supabase no encuentra sus variables.
+
 No hace falta tocar Vercel ni desactivar Deployment Protection.
 
 Mientras probás:
