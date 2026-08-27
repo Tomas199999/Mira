@@ -31,6 +31,12 @@ export const en: Translations = {
     title: 'Friends', requests: 'Requests', findContacts: 'Find contacts',
     search: 'Search by username', add: 'Add', pending: 'Pending',
     accept: 'Accept', reject: 'Decline', remove: 'Remove', block: 'Block',
+    results: 'Results',
+    fromContacts: 'From your contacts',
+    noResults: 'No results',
+    contactsPrivacy: 'We compare an encrypted version of the numbers. We never store your address book or send names.',
+    noMatchesTitle: 'Nobody yet',
+    noMatchesBody: 'None of your contacts use Mira right now. Invite them.',
   },
   profile: {
     completed: 'Challenges completed', myStory: 'My story', achievements: 'Achievements',

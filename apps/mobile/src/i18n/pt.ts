@@ -31,6 +31,12 @@ export const pt: Translations = {
     title: 'Amigos', requests: 'Solicitações', findContacts: 'Encontrar contatos',
     search: 'Buscar por nome de usuário', add: 'Adicionar', pending: 'Pendente',
     accept: 'Aceitar', reject: 'Recusar', remove: 'Remover', block: 'Bloquear',
+    results: 'Resultados',
+    fromContacts: 'Dos seus contatos',
+    noResults: 'Sem resultados',
+    contactsPrivacy: 'Comparamos uma versão criptografada dos números. Não guardamos sua agenda nem enviamos nomes.',
+    noMatchesTitle: 'Ninguém ainda',
+    noMatchesBody: 'Nenhum dos seus contatos usa o Mira por enquanto. Convide.',
   },
   profile: {
     completed: 'Desafios concluídos', myStory: 'Minha história', achievements: 'Conquistas',

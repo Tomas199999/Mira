@@ -64,7 +64,7 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 
 | Componente | Estado |
 |---|---|
-| Esquema y RLS | ✅ 30 tablas, verificado (69/69) |
+| Esquema y RLS | ✅ verificado (81/81) |
 | Catálogo de objetos | ✅ 45 objetos con alias y criterios visuales |
 | Funciones de dominio (racha, rankings, desafío) | ✅ escritas y probadas |
 | Tipos compartidos y contrato de API | ✅ `packages/shared` |
@@ -75,7 +75,8 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 | Backend: panel admin | ⬜ Fase 10 |
 | Cámara y subida | 🟡 flujo completo; falta App Attest, que necesita un development build |
 | Pipeline de IA y moderación | 🟡 escrito y verificado con dobles; falta ANTHROPIC_API_KEY para probar el modelo real |
-| Amigos, contactos, feed | ⬜ Fases 6–7 |
+| Amigos y contactos | ✅ búsqueda, solicitudes, bloqueo y matching por hash |
+| Feed | ⬜ siguiente |
 | Notificaciones push | ⬜ Fase 9 |
 
 ## Decisiones ya tomadas — no rediscutir
@@ -113,6 +114,13 @@ Están razonadas en `docs/`. Cambiarlas es una conversación, no un commit.
 - **La sesión de Supabase no entra en SecureStore de una pieza.** El límite es
   ~2048 bytes y una sesión lo supera, así que `src/services/secure-storage.ts`
   la fragmenta. Sin eso el usuario se desloguea solo, de forma intermitente.
+- **`pgcrypto` vive en el esquema `extensions`, no en `public`.** Toda función
+  que use `digest()` o `gen_random_bytes()` necesita
+  `set search_path = public, extensions`, o falla SÓLO en producción. El shim de
+  test replica esa ubicación justamente para que se vea antes.
+- **En plpgsql, no nombres una variable igual que una columna.** `window_start`
+  como variable y como columna dejó el rate limiting entero caído, y el llamador
+  lo tapaba porque dejaba pasar ante error.
 - **Node ESM exige extensiones en los imports; Metro no las tolera.** Por eso
   los scripts que importan `packages/shared` corren con `tsx`, no con `node`.
 - **El SDK de Anthropic está tipado contra el subpath `zod/v4` de zod 3.25**,

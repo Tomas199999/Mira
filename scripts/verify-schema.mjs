@@ -556,6 +556,121 @@ async function main() {
     check('una foto distinta no se marca como duplicada', notFound.id === null,
       String(notFound.id));
 
+    // ---- descubrimiento por contactos (§16) --------------------------------
+    // La propiedad que hay que sostener: se guarda el hash del teléfono, nunca
+    // el número, y sólo de quien lo pidió.
+    const SALT = 'mira.contacts.v1';
+    const phoneHash = (phone) =>
+      client.query('select extensions.digest($1, $2) as h', [SALT + phone, 'sha256'])
+        .then(r => r.rows[0].h);
+
+    const findable = await mkUser('encontrable', '1993-01-01', 'AR');
+    const hidden   = await mkUser('escondido',   '1993-02-02', 'AR');
+    const searcher = await mkUser('buscador',    '1993-03-03', 'AR');
+
+    await asUser(client, findable, async () => {
+      await client.query("select set_phone_discoverability('+5491133334444', true)");
+      const { rows } = await client.query(
+        'select phone_hash, discoverable_by_phone from user_private where user_id = $1', [findable]);
+      check('publicar el teléfono guarda un hash, no el número',
+        rows[0].discoverable_by_phone === true && rows[0].phone_hash !== null
+          && !rows[0].phone_hash.toString().includes('5491133334444'));
+    });
+    // Persistir fuera de la transacción de prueba.
+    await client.query("select set_config('request.jwt.claim.sub', $1, false)", [findable]);
+    await client.query("select set_phone_discoverability('+5491133334444', true)");
+
+    // El escondido tiene el mismo número publicado… pero sin optar por aparecer.
+    await client.query("select set_config('request.jwt.claim.sub', $1, false)", [hidden]);
+    await client.query("select set_phone_discoverability('+5491155556666', false)");
+
+    await asUser(client, searcher, async () => {
+      const h1 = await phoneHash('+5491133334444');
+      const h2 = await phoneHash('+5491155556666');
+      const { rows } = await client.query(
+        'select user_id, username, relationship from match_contact_hashes(array[$1, $2]::bytea[])',
+        [h1, h2]);
+      check('la agenda encuentra a quien optó por ser encontrable',
+        rows.length === 1 && rows[0].user_id === findable && rows[0].relationship === 'none',
+        JSON.stringify(rows));
+      check('no encuentra a quien no optó', !rows.some(r => r.user_id === hidden));
+    });
+
+    await asUser(client, searcher, async () => {
+      const bogus = await phoneHash('+5491100000000');
+      const { rows } = await client.query(
+        'select user_id from match_contact_hashes(array[$1]::bytea[])', [bogus]);
+      check('un número que no está registrado no devuelve nada', rows.length === 0);
+    });
+
+    // Un bloqueo esconde a la persona incluso si está en la agenda.
+    await client.query('insert into blocks (blocker_id, blocked_id) values ($1, $2)',
+      [findable, searcher]);
+    await asUser(client, searcher, async () => {
+      const h1 = await phoneHash('+5491133334444');
+      const { rows } = await client.query(
+        'select user_id from match_contact_hashes(array[$1]::bytea[])', [h1]);
+      check('un bloqueo esconde a la persona aunque esté en la agenda', rows.length === 0);
+    });
+    await client.query('delete from blocks where blocker_id = $1', [findable]);
+
+    // ---- búsqueda por username ----------------------------------------------
+    await asUser(client, searcher, async () => {
+      const { rows } = await client.query("select username from search_users('encontr')");
+      check('la búsqueda encuentra por prefijo de username',
+        rows.some(r => r.username === 'encontrable'), JSON.stringify(rows));
+
+      const { rows: self } = await client.query("select username from search_users('buscador')");
+      check('la búsqueda no se devuelve a uno mismo',
+        !self.some(r => r.username === 'buscador'));
+
+      // Sólo prefijo: buscar el medio de un nombre no debería listarlo.
+      const { rows: mid } = await client.query("select username from search_users('contrable')");
+      check('la búsqueda no hace subcadena', mid.length === 0, JSON.stringify(mid));
+    });
+
+    // ---- grafo social --------------------------------------------------------
+    await client.query('insert into friend_requests (requester_id, addressee_id) values ($1, $2)',
+      [findable, searcher]);
+    await asUser(client, searcher, async () => {
+      const { rows: [graph] } = await client.query('select get_my_social_graph() as g');
+      check('el grafo lista la solicitud recibida',
+        graph.g.incoming.length === 1 && graph.g.incoming[0].username === 'encontrable',
+        JSON.stringify(graph.g.incoming));
+      check('y no la confunde con una enviada', graph.g.outgoing.length === 0);
+    });
+
+    // El search_path de toda función que use pgcrypto tiene que incluir
+    // `extensions`, que es donde Supabase instala la extensión. Sin esto el
+    // fallo aparece recién en producción (migración 0023).
+    const { rows: badPath } = await client.query(`
+      select p.proname
+        from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public'
+         -- Sólo funciones normales: citext instala agregados en public y
+         -- pg_get_functiondef() no los sabe describir.
+         and p.prokind = 'f'
+         and pg_get_functiondef(p.oid) ~ '\\m(digest|gen_random_bytes|crypt|hmac)\\s*\\('
+         and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c
+                          where c like 'search_path=%extensions%')
+       order by 1`);
+    check('toda función que usa pgcrypto incluye extensions en su search_path',
+      badPath.length === 0, badPath.map(r => r.proname).join(', '));
+
+    // Y el rate limiting tiene que funcionar de verdad: estuvo caído por una
+    // ambigüedad de nombres y el llamador lo tapaba dejando pasar.
+    const limitBucket = `test:${Date.now()}`;
+    const verdicts = [];
+    for (let i = 0; i < 4; i += 1) {
+      const { rows: [r] } = await client.query(
+        'select consume_rate_limit($1, 3, 3600) as v', [limitBucket]);
+      verdicts.push(r.v);
+    }
+    check('consume_rate_limit cuenta y corta al pasar el límite',
+      verdicts[0].allowed === true && verdicts[2].allowed === true
+        && verdicts[3].allowed === false && verdicts[3].count === 4,
+      JSON.stringify(verdicts.map(v => `${v.count}:${v.allowed}`)));
+
     // §18 — los datos privados no salen de la propia fila.
     await asUser(client, bob, async () => {
       const { rows } = await client.query('select * from user_private where user_id = $1', [alice]);

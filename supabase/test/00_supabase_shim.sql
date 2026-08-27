@@ -8,6 +8,15 @@
 -- Este archivo NO se aplica en producción: no está en supabase/migrations.
 -- =============================================================================
 
+-- --- Extensiones donde las pone Supabase --------------------------------------
+-- pgcrypto vive en `extensions`, no en `public`. Replicarlo acá es lo que hace
+-- que una función con `search_path = public` que use digest() falle en los
+-- tests en vez de fallar recién en producción.
+create schema if not exists extensions;
+drop extension if exists pgcrypto cascade;
+create extension if not exists pgcrypto with schema extensions;
+grant usage on schema extensions to public;
+
 -- --- Roles de Supabase --------------------------------------------------------
 do $$ begin
   if not exists (select 1 from pg_roles where rolname = 'anon') then

@@ -48,6 +48,12 @@ export const es = {
     reject: 'Rechazar',
     remove: 'Eliminar',
     block: 'Bloquear',
+    results: 'Resultados',
+    fromContacts: 'De tus contactos',
+    noResults: 'Sin resultados',
+    contactsPrivacy: 'Comparamos una versión cifrada de los números. No guardamos tu agenda ni mandamos nombres.',
+    noMatchesTitle: 'Todavía nadie',
+    noMatchesBody: 'Ninguno de tus contactos usa Mira por ahora. Invitalos.',
   },
 
   profile: {

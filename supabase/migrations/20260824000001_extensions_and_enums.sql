@@ -2,7 +2,10 @@
 -- Mira — 0001: extensiones y tipos enumerados
 -- =============================================================================
 
-create extension if not exists "pgcrypto";
+-- pgcrypto ya viene instalado en Supabase, en el esquema `extensions`.
+-- Toda función que use digest() o gen_random_bytes() necesita
+-- `set search_path = public, extensions` o no la encuentra (ver migración 0023).
+create extension if not exists "pgcrypto" with schema extensions;
 create extension if not exists "citext";
 
 -- --- Grafo social -------------------------------------------------------------
