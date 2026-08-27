@@ -42,6 +42,8 @@ npm run verify:schema    # Postgres embebido: 47 propiedades de RLS y permisos
 npm run verify:auth      # flujo de alta contra el Supabase real (necesita .env)
 npm run verify:api       # API del desafío; levantá antes el server local en :3210
 npm run verify:pipeline  # imagen y decisiones de IA, sin llamar al modelo
+npm run verify:e2e       # recorrido completo, de crear cuenta al feed
+npm run verify:performance # genera volumen y mide los planes con EXPLAIN
 npm run typecheck
 npm run mobile           # abre Expo
 ```
@@ -117,6 +119,9 @@ Están razonadas en `docs/`. Cambiarlas es una conversación, no un commit.
 - **La sesión de Supabase no entra en SecureStore de una pieza.** El límite es
   ~2048 bytes y una sesión lo supera, así que `src/services/secure-storage.ts`
   la fragmenta. Sin eso el usuario se desloguea solo, de forma intermitente.
+- **RLS impide usar índices cuando la política no es LEAKPROOF.** Para una
+  consulta que sólo devuelve datos propios, usá `SECURITY DEFINER` con
+  `where user_id = auth.uid()` explícito. Ver `docs/ARCHITECTURE.md § 7 bis`.
 - **Las tablas del catálogo (`challenge_objects`, `daily_challenges`) NO son
   legibles por los usuarios**, y eso rompe cualquier consulta que las una. Por
   eso `submissions.object_display_name` está desnormalizado: el feed necesita

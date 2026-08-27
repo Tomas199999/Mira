@@ -124,6 +124,34 @@ Contadores por ventana fija en `rate_limit_counters`. Es lo bastante bueno para
 el MVP y no agrega una dependencia más. La capa está detrás de una interfaz para
 poder cambiarla por Redis cuando el volumen lo justifique.
 
+## 7 bis. La trampa de rendimiento de RLS
+
+Vale la pena tenerlo escrito porque no es evidente y costó encontrarlo.
+
+La política de RLS de `submissions` llama a `viewer_can_see_content_of()`, que
+no es `LEAKPROOF`. Postgres **no puede empujar el filtro del usuario por debajo
+de una condición de seguridad no leakproof**: primero evalúa la política sobre
+cada fila, y recién después aplica el resto. El índice queda inutilizable
+mientras la política mande.
+
+`get_history_month()` hacía un `LEFT JOIN` por cada día del mes, así que eso
+eran 27 recorridos completos de la tabla: **1.142 ms y 182.000 páginas tocadas
+para devolver 27 filas.**
+
+La regla que queda:
+
+- **Consulta que por definición devuelve datos propios** → `SECURITY DEFINER`
+  con `where user_id = auth.uid()` explícito. No se afloja nada: la condición de
+  visibilidad es trivialmente "es mío", y queda escrita en el `WHERE` en lugar
+  de delegada a una política que además cuesta cara.
+- **Consulta con visibilidad no trivial** (el feed: amigos, bloqueos) →
+  `SECURITY INVOKER` y que RLS haga su trabajo. Se paga el costo porque la
+  alternativa es reimplementar las reglas a mano y que diverjan.
+
+Tras el cambio: **3,3 ms**. Lo verifica `npm run verify:performance`, que genera
+5.000 usuarios y 60.000 publicaciones y mide con `EXPLAIN ANALYZE`: con la base
+vacía cualquier plan parece rápido.
+
 ## 8. Estructura del repositorio
 
 ```

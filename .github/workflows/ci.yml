@@ -32,6 +32,11 @@ jobs:
       - name: Verificar procesamiento de imagen y pipeline
         run: npm run verify:pipeline
 
+      # Con la base vacía cualquier plan parece rápido. Esto genera volumen
+      # realista y mide, que es lo único que detecta un índice inservible.
+      - name: Verificar performance de las consultas calientes
+        run: npm run verify:performance
+
       - name: Typecheck
         run: npm run typecheck
 
