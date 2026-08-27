@@ -45,7 +45,37 @@ Tres crons, todos con `CRON_SECRET`:
 | Job | Cadencia | Qué hace |
 |---|---|---|
 | `schedule-challenges` | diario, 00:15 UTC | sortea el objeto de los próximos días y crea las ventanas de cada usuario según su zona horaria |
-| `send-challenge-push` | cada 5 minutos | notifica a quienes les acaba de abrir la ventana. El peor retraso posible entre que abre y llega el aviso es de cinco minutos |
+
+
+**El aviso del desafío NO lo programa Vercel.** El plan Hobby sólo permite
+crons diarios, y ese job tiene que correr cada pocos minutos: la ventana de
+cada usuario se sortea al segundo, así que un cron diario haría llegar la
+notificación horas tarde o después de que la ventana cerró.
+
+Lo programa **pg_cron dentro de Supabase**, que está disponible en todos los
+planes y da granularidad de minutos. `pg_net` hace la llamada HTTP al endpoint,
+que sigue teniendo toda la lógica en TypeScript. El secreto vive en Vault y no
+en la definición del job, porque `cron.job` guarda el comando en texto plano.
+
+| Job de pg_cron | Cadencia | Qué hace |
+|---|---|---|
+| `mira-challenge-push` | cada 5 minutos | llama a `/api/cron/send-challenge-push` |
+| `mira-purge-rate-limits` | diario | borra los contadores viejos |
+
+Para cambiar la URL a la que llama: `scheduler_config.api_base_url`.
+
+### Bloqueante actual
+
+`pg_net` llega a Vercel pero recibe el HTML del login de **Deployment
+Protection** en vez del JSON. Hasta resolverlo, **las notificaciones no salen**.
+Dos salidas:
+
+1. **Desactivar Vercel Authentication** en Settings → Deployment Protection.
+   Es lo que hace falta igual para que la app móvil pueda llamar a la API.
+2. **Protection Bypass for Automation**: se genera el secreto en esa misma
+   pantalla y se agrega como cabecera `x-vercel-protection-bypass` en
+   `trigger_challenge_push()`. Mantiene el muro para las personas y deja pasar
+   sólo a la automatización — mejor postura, pero no alcanza para la app.
 | `close-day` | diario | corta rachas o gasta protectores, y materializa los rankings |
 
 ## App móvil

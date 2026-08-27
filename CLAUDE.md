@@ -133,6 +133,9 @@ Están razonadas en `docs/`. Cambiarlas es una conversación, no un commit.
 - **El SDK de Anthropic está tipado contra el subpath `zod/v4` de zod 3.25**,
   no contra el paquete `zod@4`. Instalar el segundo crea dos copias del core y
   los tipos dejan de encajar.
+- **El plan Hobby de Vercel sólo permite crons diarios.** El aviso del desafío
+  lo programa `pg_cron` dentro de Supabase, no `vercel.json`. Ver
+  `docs/DEPLOYMENT.md`.
 - **Vercel Cron invoca con `GET`, no con `POST`.** Una ruta que exporta sólo
   `POST` devuelve 405 todas las noches sin que nadie se entere.
 - **Los imports internos de `packages/shared` van sin extensión.** Con `.js`
