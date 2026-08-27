@@ -31,8 +31,12 @@ Si algo no se puede implementar de verdad todavía, **no se implementa**: se
 documenta como pendiente. Un `EmptyState` honesto es correcto; un feed con
 usuarios inventados no.
 
-Ya no hay excepciones: el harness de diseño que existía en la Fase 1 se
-eliminó cuando la pantalla principal pasó a consumir el backend real.
+La única excepción, y está marcada como tal, es
+`apps/web/src/server/ai/vision-stub.ts`: un doble de prueba que acepta
+cualquier foto, para poder recorrer el bucle en local sin credenciales de
+Anthropic. Se activa con `MIRA_STUB_VISION=1`, avisa por consola en cada
+llamada, y **el módulo se niega a cargarse en producción**. Lo verifica una
+aserción de `verify:pipeline`.
 
 ## Verificar antes de dar algo por bueno
 

@@ -27,6 +27,27 @@ no hay nada mockeado haciéndose pasar por funcional (§79 del brief).
 | Amigos, contactos, feed | ⬜ Fases 6–7 |
 | Notificaciones push | ⬜ Fase 9 |
 
+## Probarlo en el teléfono
+
+```bash
+npm run demo
+```
+
+Levanta el backend en la máquina y te dice con qué comando abrir la app
+apuntando a la IP de tu red local — el teléfono no puede resolver `localhost`.
+No hace falta tocar Vercel ni desactivar Deployment Protection.
+
+Mientras probás:
+
+```bash
+npm run demo:abrir <usuario>   # abre tu ventana del desafío ahora mismo
+npm run demo:admin <email>     # te da acceso al panel en /admin
+```
+
+Sin `ANTHROPIC_API_KEY`, la validación de fotos usa un **doble de prueba que
+acepta cualquier imagen sin mirarla**. El comando lo dice al arrancar y el
+módulo se niega a cargarse en producción.
+
 ## Arrancar
 
 ```bash

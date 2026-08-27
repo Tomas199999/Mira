@@ -158,6 +158,16 @@ try {
   check('ante poca confianza se manda a revisión, no se rechaza',
     review.decision.outcome === 'review', review.decision.outcome);
 
+  // El doble de prueba tiene que negarse a existir en producción. Si alguna vez
+  // se colara, la validación de fotos sería una mentira.
+  const { StubVisionProvider } = await import('../apps/web/src/server/ai/vision-stub.ts');
+  const previous = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  let refused = false;
+  try { new StubVisionProvider(); } catch { refused = true; }
+  process.env.NODE_ENV = previous;
+  check('el proveedor de visión simulado se niega a cargarse en producción', refused);
+
 } catch (err) {
   fail.push(`la verificación se cortó: ${err.message}`);
   console.error(err.stack);

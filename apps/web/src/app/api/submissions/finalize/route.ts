@@ -6,6 +6,7 @@ import { processImage } from '@/server/images/process';
 import { runPipeline } from '@/server/ai/pipeline';
 import { ClaudeVisionProvider } from '@/server/ai/vision-claude';
 import { ClaudeModerationProvider } from '@/server/ai/moderation-claude';
+import { StubModerationProvider, StubVisionProvider } from '@/server/ai/vision-stub';
 
 export const dynamic = 'force-dynamic';
 // La cascada de visión puede tardar; sin esto la función se corta a la mitad
@@ -79,15 +80,23 @@ export async function POST(request: NextRequest) {
     const escalationModel = process.env.VISION_MODEL_ESCALATION ?? 'claude-opus-5';
     const escalationEnabled = await loadFlag(db, 'ai_escalation_enabled', true);
 
+    // Doble de prueba, sólo para recorrer el bucle en local sin credenciales.
+    // El propio módulo se niega a cargarse en producción.
+    const useStub = process.env.MIRA_STUB_VISION === '1';
+    if (useStub) {
+      console.warn('[finalize] MIRA_STUB_VISION=1 — la foto NO se está analizando');
+    }
+
     const outcome = await runPipeline(image, {
       objectName: object.object_name,
       displayName: object.display_name,
       aliases: object.aliases ?? [],
       visualCriteria: object.visual_criteria ?? [],
     }, {
-      primary: new ClaudeVisionProvider(primaryModel),
-      escalation: escalationEnabled ? new ClaudeVisionProvider(escalationModel) : null,
-      moderation: new ClaudeModerationProvider(primaryModel),
+      primary: useStub ? new StubVisionProvider() : new ClaudeVisionProvider(primaryModel),
+      escalation: useStub ? null
+        : escalationEnabled ? new ClaudeVisionProvider(escalationModel) : null,
+      moderation: useStub ? new StubModerationProvider() : new ClaudeModerationProvider(primaryModel),
       thresholds,
       findDuplicate: async (hash) => {
         const { data } = await db.rpc('find_duplicate_photo', {

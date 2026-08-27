@@ -25,7 +25,10 @@
     "verify:api": "node --env-file=.env scripts/verify-api.mjs",
     "verify:pipeline": "tsx scripts/verify-pipeline.mjs",
     "verify:e2e": "node --env-file=.env scripts/verify-e2e.mjs",
-    "verify:performance": "node scripts/verify-performance.mjs"
+    "verify:performance": "node scripts/verify-performance.mjs",
+    "demo": "node scripts/demo.mjs",
+    "demo:abrir": "node --env-file=.env scripts/demo-helpers.mjs abrir",
+    "demo:admin": "node --env-file=.env scripts/demo-helpers.mjs admin"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",
