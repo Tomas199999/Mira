@@ -132,6 +132,18 @@ export const es = {
     finish: 'Entrar a Mira',
   },
 
+  challenge: {
+    accepted: '¡Lo encontramos!',
+    acceptedLate: 'Llegaste fuera de hora, así que no cuenta para la racha. Pero la foto queda.',
+    streakGrew: 'Tu racha sigue viva.',
+    inReview: 'Estamos revisando tu foto',
+    inReviewBody: 'No estamos del todo seguros, así que la mira una persona. Tu racha está a salvo mientras tanto.',
+    notFound: 'No lo encontramos',
+    notFoundBody: 'No llegamos a ver {{object}} en la foto. Probá de nuevo con el objeto más a la vista.',
+    blocked: 'No podemos publicar esta foto',
+    blockedBody: 'La foto no cumple con las normas de la comunidad.',
+  },
+
   settings: {
     account: 'Cuenta',
     legal: 'Legal',
@@ -164,6 +176,8 @@ export const es = {
     passwordTooShort: 'La contraseña tiene que tener al menos 8 caracteres.',
     emailInvalid: 'Ese email no parece válido.',
     fieldRequired: 'Completá este campo.',
+    duplicatePhoto: 'Esa foto ya se usó antes. Sacá una nueva.',
+    moderationBlocked: 'Esa foto no cumple con las normas de la comunidad.',
     generic: 'Algo salió mal. Intentá de nuevo en un momento.',
   },
 
@@ -173,6 +187,9 @@ export const es = {
     continue: 'Continuar',
     done: 'Listo',
     settings: 'Ajustes',
+    send: 'Enviar',
+    retake: 'Sacar otra',
+    analyzing: 'Analizando…',
     loading: 'Cargando…',
   },
 };

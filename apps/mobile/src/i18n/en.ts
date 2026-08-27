@@ -104,6 +104,18 @@ export const en: Translations = {
     finish: 'Enter Mira',
   },
 
+  challenge: {
+    accepted: 'Found it!',
+    acceptedLate: "You were past the deadline, so it doesn't count for your streak. The photo stays, though.",
+    streakGrew: 'Your streak lives on.',
+    inReview: "We're reviewing your photo",
+    inReviewBody: "We're not entirely sure, so a person will take a look. Your streak is safe meanwhile.",
+    notFound: "We couldn't find it",
+    notFoundBody: "We couldn't see {{object}} in the photo. Try again with the object more visible.",
+    blocked: "We can't publish this photo",
+    blockedBody: "The photo doesn't meet the community guidelines.",
+  },
+
   settings: {
     account: 'Account',
     legal: 'Legal',
@@ -136,10 +148,15 @@ export const en: Translations = {
     passwordTooShort: 'Password must be at least 8 characters.',
     emailInvalid: "That email doesn't look valid.",
     fieldRequired: 'Please fill this in.',
+    duplicatePhoto: 'That photo has been used before. Take a new one.',
+    moderationBlocked: "That photo doesn't meet the community guidelines.",
     generic: 'Something went wrong. Try again in a moment.',
   },
   common: {
     retry: 'Retry', cancel: 'Cancel', continue: 'Continue', done: 'Done',
     settings: 'Settings', loading: 'Loading…',
+    send: 'Send',
+    retake: 'Retake',
+    analyzing: 'Analysing…',
   },
 };

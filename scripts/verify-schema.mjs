@@ -443,6 +443,119 @@ async function main() {
       nowYes.timezone === 'America/Sao_Paulo' && nowYes.pending_timezone === null,
       JSON.stringify(nowYes));
 
+    // ---- pipeline de subida (§8, §9, §42) ----------------------------------
+    const subUser = await mkUser('subidor', '1994-02-02', 'AR');
+    const { rows: [subWin] } = await client.query(
+      `insert into challenge_windows (user_id, daily_challenge_id, challenge_date, opens_at, closes_at, timezone)
+       values ($1, $2, $3::date, now() - interval '5 minutes', now() + interval '60 minutes', 'UTC')
+       returning id`, [subUser, ch.id, today]);
+
+    let firstToken = null, firstSubmission = null;
+    await asUser(client, subUser, async () => {
+      const { rows } = await client.query('select start_submission($1) as r', [subWin.id]);
+      const r = rows[0].r;
+      check('start_submission reserva el intento y emite un token',
+        Boolean(r.submission_id) && Boolean(r.upload_token) && r.attempts_remaining === 2,
+        JSON.stringify(r));
+
+      const { rows: r2 } = await client.query('select start_submission($1) as r', [subWin.id]);
+      check('el segundo intento descuenta del cupo', r2[0].r.attempts_remaining === 1,
+        JSON.stringify(r2[0].r));
+
+      await client.query('select start_submission($1) as r', [subWin.id]);
+      const err = await expectError(() => client.query('select start_submission($1) as r', [subWin.id]));
+      check('al agotar los intentos, start_submission falla',
+        err !== null && /attempts_exhausted/.test(err.message),
+        err ? err.message : 'fue aceptado');
+    });
+
+    // Token de un solo uso: fuera de la transacción para que persista.
+    await client.query(
+      `update challenge_windows set attempts_used = 0 where id = $1`, [subWin.id]);
+    await client.query("select set_config('request.jwt.claim.sub', $1, false)", [subUser]);
+    const { rows: [issued] } = await client.query('select start_submission($1) as r', [subWin.id]);
+    firstToken = issued.r.upload_token;
+    firstSubmission = issued.r.submission_id;
+
+    const { rows: [used1] } = await client.query(
+      'select consume_upload_token($1, $2) as ok', [firstToken, firstSubmission]);
+    check('el token de subida se consume una vez', used1.ok === true);
+
+    const { rows: [used2] } = await client.query(
+      'select consume_upload_token($1, $2) as ok', [firstToken, firstSubmission]);
+    check('el mismo token no se puede reutilizar', used2.ok === false);
+
+    const { rows: [wrongTok] } = await client.query(
+      'select consume_upload_token($1, $2) as ok', ['no-existe', firstSubmission]);
+    check('un token inventado no sirve', wrongTok.ok === false);
+
+    // Veredicto y racha, juntos.
+    const { rows: [applied] } = await client.query(
+      `select apply_submission_result($1, 'accepted', 'accepted', 0.95, 'passed') as r`,
+      [firstSubmission]);
+    check('aceptar una foto incrementa la racha en la misma operación',
+      applied.r.streak === 1 && applied.r.counted_for_streak === true,
+      JSON.stringify(applied.r));
+
+    const { rows: [closedWindow] } = await client.query(
+      'select completed_at from challenge_windows where id = $1', [subWin.id]);
+    check('al aceptar, la ventana queda marcada como completada', closedWindow.completed_at !== null);
+
+    // Fuera de hora: la foto queda, pero no cuenta para la racha (§42).
+    const lateUser = await mkUser('tardio', '1994-03-03', 'AR');
+    const { rows: [lateSub] } = await client.query(
+      `insert into submissions (user_id, daily_challenge_id, challenge_date, photo_path,
+                                timezone, status, was_late)
+       values ($1, $2, $3::date, 'x.webp', 'UTC', 'pending', true) returning id`,
+      [lateUser, ch.id, today]);
+    const { rows: [lateResult] } = await client.query(
+      `select apply_submission_result($1, 'accepted', 'accepted', 0.99, 'passed') as r`,
+      [lateSub.id]);
+    check('una foto fuera de hora se acepta pero no mueve la racha',
+      lateResult.r.counted_for_streak === false && lateResult.r.was_late === true,
+      JSON.stringify(lateResult.r));
+
+    // En revisión: no incrementa, pero tampoco rompe (docs/AI.md).
+    const revUser = await mkUser('revision', '1994-04-04', 'AR');
+    const { rows: [revSub] } = await client.query(
+      `insert into submissions (user_id, daily_challenge_id, challenge_date, photo_path,
+                                timezone, status)
+       values ($1, $2, $3::date, 'y.webp', 'UTC', 'pending') returning id`,
+      [revUser, ch.id, today]);
+    await client.query(
+      `select apply_submission_result($1, 'in_review', 'review', 0.55, 'passed')`, [revSub.id]);
+    const { rows: [revProfile] } = await client.query(
+      'select current_streak from profiles where id = $1', [revUser]);
+    check('una foto en revisión no incrementa la racha todavía', revProfile.current_streak === 0);
+
+    await client.query('select close_challenge_day($1::date)', [today]);
+    const { rows: [revAfter] } = await client.query(
+      'select current_streak from profiles where id = $1', [revUser]);
+    check('…pero el cierre del día tampoco se la rompe', revAfter.current_streak === 0);
+
+    // El dedupe tiene que encontrar la MISMA foto re-exportada, no sólo el
+    // archivo idéntico. Con igualdad exacta no encontraría nada que el sha256
+    // no encontrara ya.
+    const baseHash = '\\x0f1e2d3c4b5a6978';
+    const nearHash = '\\x0f1e2d3c4b5a6979';   // un bit de diferencia
+    const farHash  = '\\xf0e1d2c3b4a59687';   // invertida
+    const { rows: [dist] } = await client.query(
+      'select hash_distance($1::bytea, $2::bytea) as cerca, hash_distance($1::bytea, $3::bytea) as lejos',
+      [baseHash, nearHash, farHash]);
+    check('hash_distance mide bits, no igualdad',
+      dist.cerca === 1 && dist.lejos === 64, JSON.stringify(dist));
+
+    await client.query(
+      `update submissions set perceptual_hash = $1::bytea where id = $2`, [baseHash, sub.id]);
+    const { rows: [found] } = await client.query(
+      'select find_duplicate_photo($1::bytea, $2, 8) as id', [nearHash, firstSubmission]);
+    check('una foto re-exportada se detecta como duplicada', found.id === sub.id,
+      String(found.id));
+    const { rows: [notFound] } = await client.query(
+      'select find_duplicate_photo($1::bytea, $2, 8) as id', [farHash, firstSubmission]);
+    check('una foto distinta no se marca como duplicada', notFound.id === null,
+      String(notFound.id));
+
     // §18 — los datos privados no salen de la propia fila.
     await asUser(client, bob, async () => {
       const { rows } = await client.query('select * from user_private where user_id = $1', [alice]);

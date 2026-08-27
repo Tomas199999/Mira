@@ -104,6 +104,18 @@ export const pt: Translations = {
     finish: 'Entrar no Mira',
   },
 
+  challenge: {
+    accepted: 'Achamos!',
+    acceptedLate: 'Você passou do horário, então não conta para a sequência. Mas a foto fica.',
+    streakGrew: 'Sua sequência continua viva.',
+    inReview: 'Estamos revisando sua foto',
+    inReviewBody: 'Não temos certeza, então uma pessoa vai olhar. Sua sequência está garantida enquanto isso.',
+    notFound: 'Não encontramos',
+    notFoundBody: 'Não conseguimos ver {{object}} na foto. Tente de novo com o objeto mais à vista.',
+    blocked: 'Não podemos publicar esta foto',
+    blockedBody: 'A foto não segue as diretrizes da comunidade.',
+  },
+
   settings: {
     account: 'Conta',
     legal: 'Legal',
@@ -136,10 +148,15 @@ export const pt: Translations = {
     passwordTooShort: 'A senha precisa ter pelo menos 8 caracteres.',
     emailInvalid: 'Esse email não parece válido.',
     fieldRequired: 'Preencha este campo.',
+    duplicatePhoto: 'Essa foto já foi usada antes. Tire uma nova.',
+    moderationBlocked: 'Essa foto não segue as diretrizes da comunidade.',
     generic: 'Algo deu errado. Tente de novo em um instante.',
   },
   common: {
     retry: 'Tentar de novo', cancel: 'Cancelar', continue: 'Continuar', done: 'Pronto',
     settings: 'Ajustes', loading: 'Carregando…',
+    send: 'Enviar',
+    retake: 'Tirar outra',
+    analyzing: 'Analisando…',
   },
 };

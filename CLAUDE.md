@@ -42,6 +42,7 @@ npm install
 npm run verify:schema    # Postgres embebido: 47 propiedades de RLS y permisos
 npm run verify:auth      # flujo de alta contra el Supabase real (necesita .env)
 npm run verify:api       # API del desafío; levantá antes el server local en :3210
+npm run verify:pipeline  # imagen y decisiones de IA, sin llamar al modelo
 npm run typecheck
 npm run mobile           # abre Expo
 ```
@@ -63,7 +64,7 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 
 | Componente | Estado |
 |---|---|
-| Esquema y RLS | ✅ 29 tablas, 37 políticas, verificado (55/55) |
+| Esquema y RLS | ✅ 30 tablas, verificado (69/69) |
 | Catálogo de objetos | ✅ 45 objetos con alias y criterios visuales |
 | Funciones de dominio (racha, rankings, desafío) | ✅ escritas y probadas |
 | Tipos compartidos y contrato de API | ✅ `packages/shared` |
@@ -72,8 +73,8 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 | Auth, perfiles, onboarding | 🟡 email/contraseña completo y verificado; falta Apple y Google |
 | Backend: desafío diario y cron | 🟡 `GET /api/challenge` y los dos jobs, verificados; falta el resto de la API |
 | Backend: panel admin | ⬜ Fase 10 |
-| Cámara y subida | ⬜ Fase 5 |
-| Pipeline de IA y moderación | ⬜ Fase 4 |
+| Cámara y subida | 🟡 flujo completo; falta App Attest, que necesita un development build |
+| Pipeline de IA y moderación | 🟡 escrito y verificado con dobles; falta ANTHROPIC_API_KEY para probar el modelo real |
 | Amigos, contactos, feed | ⬜ Fases 6–7 |
 | Notificaciones push | ⬜ Fase 9 |
 
@@ -112,6 +113,11 @@ Están razonadas en `docs/`. Cambiarlas es una conversación, no un commit.
 - **La sesión de Supabase no entra en SecureStore de una pieza.** El límite es
   ~2048 bytes y una sesión lo supera, así que `src/services/secure-storage.ts`
   la fragmenta. Sin eso el usuario se desloguea solo, de forma intermitente.
+- **Node ESM exige extensiones en los imports; Metro no las tolera.** Por eso
+  los scripts que importan `packages/shared` corren con `tsx`, no con `node`.
+- **El SDK de Anthropic está tipado contra el subpath `zod/v4` de zod 3.25**,
+  no contra el paquete `zod@4`. Instalar el segundo crea dos copias del core y
+  los tipos dejan de encajar.
 - **Vercel Cron invoca con `GET`, no con `POST`.** Una ruta que exporta sólo
   `POST` devuelve 405 todas las noches sin que nadie se entere.
 - **Los imports internos de `packages/shared` van sin extensión.** Con `.js`

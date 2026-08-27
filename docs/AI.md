@@ -109,8 +109,26 @@ candidato → validación de seguridad → validación de dificultad
 Un objeto sólo pasa a `approved` con `safety_reviewed_at` completo — lo obliga
 un CHECK constraint en la base, no una convención.
 
-## 7. Estado
+## 7. Límite conocido de la moderación
 
-El contrato, los umbrales, la lógica de decisión y el catálogo están escritos y
-verificados. **La implementación del proveedor y la llamada real al modelo son
-de la Fase 4 y todavía no existen.** No hay ninguna IA simulada en el código.
+Un modelo de lenguaje **no puede** hacer hash-matching contra bases conocidas de
+material de abuso infantil. `ClaudeModerationProvider` clasifica lo que se ve en
+la imagen y es una primera línea razonable, pero **no reemplaza a un proveedor
+especializado**, que hay que contratar antes de abrir el registro al público.
+
+Lo que sí queda garantizado por código: una imagen marcada en `minor_safety`,
+`nudity` o `sexual` se bloquea con `safe_for_human_review = false` y **no entra
+en la cola de revisión**. Nadie del equipo la ve.
+
+## 8. Estado
+
+Escrito y verificado sin llamar al modelo:
+- El procesamiento de imagen: validación, variantes y huella perceptual.
+- La cascada de decisión, con dobles de prueba: confianza alta acepta sin
+  escalar, lo ambiguo escala, el duplicado y la moderación cortan antes de
+  gastar un token, y la poca confianza va a revisión en vez de rechazar.
+- El dedupe por distancia de Hamming, con imágenes reales re-exportadas.
+
+**Sin verificar todavía**: la llamada real a Claude. Hace falta
+`ANTHROPIC_API_KEY`, que aún no está cargada. El código está escrito contra el
+SDK oficial y tipado, pero nadie ejecutó una inferencia de verdad.

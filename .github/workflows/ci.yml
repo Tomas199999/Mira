@@ -29,6 +29,9 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: npx supabase db advisors --linked --type security
 
+      - name: Verificar procesamiento de imagen y pipeline
+        run: npm run verify:pipeline
+
       - name: Typecheck
         run: npm run typecheck
 

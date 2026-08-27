@@ -1,21 +1,46 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import Constants from 'expo-constants';
 import type { ChallengeState } from '@mira/shared';
+import { supabase } from '@/services/supabase';
+
+const API_BASE = (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined)
+  ?? process.env.EXPO_PUBLIC_API_BASE_URL
+  ?? '';
 
 /**
- * Estado del desafío de hoy.
+ * Estado del desafío de hoy, tal como lo decide el servidor.
  *
- * En la Fase 3 esto consulta `GET /challenge` y el backend devuelve el estado
- * completo. Hasta entonces arranca en `none` — no inventa un desafío, porque
- * un desafío falso haría que la app mienta sobre lo único que importa (§79).
- *
- * `setPreviewState` existe sólo para el harness de diseño en desarrollo.
+ * La app no calcula si la ventana está abierta ni compara fechas: el reloj del
+ * teléfono se puede cambiar. Pregunta y dibuja (§61).
  */
 export function useChallengeState() {
   const [state, setState] = useState<ChallengeState>({ kind: 'none' });
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
-  return {
-    state,
-    /** Sólo para desarrollo. En release el harness no se monta. */
-    setPreviewState: setState,
-  };
+  const load = useCallback(async () => {
+    setFailed(false);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) { setState({ kind: 'none' }); return; }
+
+      const response = await fetch(`${API_BASE}/api/challenge`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await response.json();
+      if (payload?.ok) setState(payload.data as ChallengeState);
+      else setFailed(true);
+    } catch {
+      // Sin red se conserva el último estado conocido en vez de vaciar la
+      // pantalla: es más útil ver el desafío de hoy desactualizado que nada.
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  return { state, loading, failed, reload: load, setPreviewState: setState };
 }
