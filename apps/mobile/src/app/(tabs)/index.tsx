@@ -1,39 +1,82 @@
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import type { ChallengeState } from '@mira/shared';
-import { Button, Card, Countdown, EmptyState, Screen, StreakBadge, Text } from '@/components';
+import { Button, Card, Countdown, EmptyState, FeedCard, StreakBadge, Text } from '@/components';
 import { useChallengeState } from '@/features/challenge/useChallengeState';
-import { DesignHarness } from '@/features/dev/DesignHarness';
+import { getFeed, type FeedEntry } from '@/features/feed/api';
 import { space, useTheme } from '@/theme';
 import { t } from '@/i18n';
 
 /**
- * Home (§70). Lo único que importa acá es el estado del desafío de hoy.
- * El feed de amigos va debajo, nunca arriba.
+ * Home (§70). El desafío de hoy arriba; el feed de amigos debajo, nunca al revés.
+ *
+ * Es una FlatList con el desafío de encabezado y no un ScrollView con todo
+ * adentro: el feed pagina, y con un ScrollView se cargarían todas las fotos de
+ * una sola vez (§59).
  */
 export default function HomeScreen() {
-  const { state, setPreviewState } = useChallengeState();
-  const copy = t().home;
+  const theme = useTheme();
+  const { state, reload } = useChallengeState();
+  const [feed, setFeed] = useState<FeedEntry[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadFeed = useCallback(async (fresh = false) => {
+    try {
+      const page = await getFeed(fresh ? undefined : cursor ?? undefined);
+      setFeed((prev) => (fresh ? page.items : [...prev, ...page.items]));
+      setCursor(page.nextCursor);
+    } catch { /* se conserva lo que ya está en pantalla */ }
+    finally { setLoading(false); setRefreshing(false); setLoadingMore(false); }
+  }, [cursor]);
+
+  useEffect(() => { void loadFeed(true); }, []);
+
+  async function refresh() {
+    setRefreshing(true);
+    setCursor(null);
+    await Promise.all([reload(), loadFeed(true)]);
+  }
+
+  function loadMore() {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    void loadFeed(false);
+  }
 
   return (
-    <Screen scroll>
-      <Text variant="caption" tone="tertiary" style={styles.brand}>MIRA</Text>
-
-      <ChallengeCard state={state} />
-
-      <View style={styles.feedSection}>
-        <Text variant="heading">{t().tabs.friends}</Text>
-        <EmptyState
-          icon="👋"
-          title={t().empty.noFriendsTitle}
-          body={t().empty.noFriendsBody}
-        />
-      </View>
-
-      {/* Sólo en desarrollo: permite ver cada estado del desafío en el teléfono
-          sin backend. No se compila en release. */}
-      <DesignHarness onSelectState={setPreviewState} />
-    </Screen>
+    <FlatList
+      style={{ flex: 1, backgroundColor: theme.color.background }}
+      contentContainerStyle={styles.content}
+      data={feed}
+      keyExtractor={(item) => item.submission.id}
+      renderItem={({ item }) => <FeedCard entry={item} />}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={theme.color.accent} />
+      }
+      onEndReached={loadMore}
+      onEndReachedThreshold={0.4}
+      ListHeaderComponent={
+        <View style={styles.header}>
+          <Text variant="caption" tone="tertiary" style={styles.brand}>MIRA</Text>
+          <ChallengeCard state={state} />
+          <Text variant="heading" style={styles.feedTitle}>{t().tabs.friends}</Text>
+        </View>
+      }
+      ListEmptyComponent={
+        loading ? (
+          <ActivityIndicator color={theme.color.accent} style={{ marginTop: space.xl }} />
+        ) : (
+          <EmptyState icon="👋" title={t().empty.noFriendsTitle} body={t().empty.noFriendsBody} />
+        )
+      }
+      ListFooterComponent={
+        loadingMore ? <ActivityIndicator color={theme.color.accent} style={{ marginVertical: space.lg }} /> : null
+      }
+    />
   );
 }
 
@@ -60,12 +103,10 @@ function ChallengeCard({ state }: { state: ChallengeState }) {
           <Text variant="display" center>📸</Text>
           <Text variant="caption" tone="secondary">{copy.photograph}</Text>
           <Text variant="title" center>{state.objectDisplayName.toUpperCase()}</Text>
-
           <View style={styles.countdown}>
             <Text variant="caption" tone="tertiary">{copy.timeLeft}</Text>
             <Countdown until={state.closesAt} />
           </View>
-
           <Button label={copy.openCamera} onPress={() => router.push('/challenge')} size="lg" />
         </Card>
       );
@@ -74,9 +115,7 @@ function ChallengeCard({ state }: { state: ChallengeState }) {
       return (
         <Card raised style={styles.hero}>
           <Text variant="label" tone="accent">✅ {copy.completedTitle.toUpperCase()}</Text>
-          <View style={[styles.photoSlot, { backgroundColor: theme.color.surface, borderColor: theme.color.border }]}>
-            <Text variant="caption" tone="tertiary">{copy.yourPhoto}</Text>
-          </View>
+          <Text variant="body" tone="secondary">{state.objectDisplayName}</Text>
           <StreakBadge days={state.currentStreak} size="lg" />
         </Card>
       );
@@ -102,13 +141,11 @@ function ChallengeCard({ state }: { state: ChallengeState }) {
 }
 
 const styles = StyleSheet.create({
-  brand: { letterSpacing: 3, marginBottom: space.lg },
+  content: { padding: space.lg, paddingTop: space.xxxl, paddingBottom: space.huge },
+  header: { gap: space.md },
+  brand: { letterSpacing: 3, marginBottom: space.sm },
   hero: { gap: space.md, alignItems: 'center', paddingVertical: space.xl },
   heroBody: { maxWidth: 300 },
   countdown: { alignItems: 'center', gap: space.xs, marginVertical: space.sm },
-  photoSlot: {
-    width: '100%', aspectRatio: 3 / 4, borderRadius: 16, borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  feedSection: { marginTop: space.xxl, gap: space.md },
+  feedTitle: { marginTop: space.xl, marginBottom: space.md },
 });

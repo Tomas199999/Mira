@@ -671,6 +671,86 @@ async function main() {
         && verdicts[3].allowed === false && verdicts[3].count === 4,
       JSON.stringify(verdicts.map(v => `${v.count}:${v.allowed}`)));
 
+    // ---- feed y privacidad (§9, §63) ----------------------------------------
+    // La propiedad central: el feed no puede mostrar nada que RLS no dejaría
+    // ver. Se prueba con la función real, no consultando la tabla a mano.
+    const viewer = await mkUser('espectador', '1992-01-01', 'AR');
+    const poster = await mkUser('publicador', '1992-02-02', 'AR');
+
+    const { rows: [posterSub] } = await client.query(
+      `insert into submissions (user_id, daily_challenge_id, challenge_date, photo_path,
+                                thumbnail_path, timezone, status, moderation_status, object_display_name)
+       values ($1, $2, $3::date, 'p/foto.webp', 'p/foto_thumb.webp', 'UTC', 'accepted', 'passed', 'una taza')
+       returning id`, [poster, ch.id, today]);
+
+    await asUser(client, viewer, async () => {
+      const { rows } = await client.query('select submission_id from get_feed()');
+      check('el feed NO muestra la foto de un desconocido',
+        !rows.some(r => r.submission_id === posterSub.id), JSON.stringify(rows));
+    });
+
+    await client.query('insert into friendships (user_a, user_b) values ($1, $2)',
+      [viewer < poster ? viewer : poster, viewer < poster ? poster : viewer]);
+
+    await asUser(client, viewer, async () => {
+      const { rows } = await client.query('select submission_id, username from get_feed()');
+      check('tras la amistad, la foto sí aparece en el feed',
+        rows.some(r => r.submission_id === posterSub.id), JSON.stringify(rows));
+    });
+
+    // Un bloqueo la vuelve a esconder, sin deshacer la amistad primero.
+    await client.query('insert into blocks (blocker_id, blocked_id) values ($1, $2)',
+      [poster, viewer]);
+    await asUser(client, viewer, async () => {
+      const { rows } = await client.query('select submission_id from get_feed()');
+      check('un bloqueo saca la foto del feed', !rows.some(r => r.submission_id === posterSub.id));
+    });
+    await client.query('delete from blocks where blocker_id = $1', [poster]);
+    await client.query('insert into friendships (user_a, user_b) values ($1, $2) on conflict do nothing',
+      [viewer < poster ? viewer : poster, viewer < poster ? poster : viewer]);
+
+    // Lo que no pasó moderación no llega al feed aunque haya amistad.
+    const { rows: [blockedSub] } = await client.query(
+      `insert into submissions (user_id, daily_challenge_id, challenge_date, photo_path,
+                                timezone, status, moderation_status)
+       values ($1, $2, ($3::date - 1), 'p/mala.webp', 'UTC', 'accepted', 'blocked')
+       returning id`, [poster, ch.id, today]);
+    await asUser(client, viewer, async () => {
+      const { rows } = await client.query('select submission_id from get_feed()');
+      check('lo bloqueado por moderación nunca llega al feed',
+        !rows.some(r => r.submission_id === blockedSub.id));
+    });
+
+    // El feed social excluye lo propio: va arriba, separado.
+    await asUser(client, poster, async () => {
+      const { rows } = await client.query('select submission_id from get_feed()');
+      check('el feed social no incluye las fotos propias',
+        !rows.some(r => r.submission_id === posterSub.id));
+      const { rows: mine } = await client.query('select submission_id from get_my_submission()');
+      check('…que se obtienen aparte con get_my_submission',
+        mine.length === 1 && mine[0].submission_id === posterSub.id);
+    });
+
+    // Reacciones: sólo sobre lo que se puede ver.
+    await asUser(client, viewer, async () => {
+      await client.query(
+        `insert into reactions (submission_id, user_id, type) values ($1, $2, 'fire')`,
+        [posterSub.id, viewer]);
+      const { rows } = await client.query('select reactions, my_reaction from get_feed()');
+      const row = rows.find(r => r.my_reaction !== null);
+      check('la reacción se cuenta y se devuelve la propia',
+        row && row.reactions.fire === 1 && row.my_reaction === 'fire',
+        JSON.stringify(rows.map(r => r.reactions)));
+    });
+
+    const stranger = await mkUser('ajeno', '1992-03-03', 'AR');
+    await asUser(client, stranger, async () => {
+      const err = await expectError(() => client.query(
+        `insert into reactions (submission_id, user_id, type) values ($1, $2, 'fire')`,
+        [posterSub.id, stranger]));
+      check('no se puede reaccionar a algo que no se puede ver', err !== null);
+    });
+
     // §18 — los datos privados no salen de la propia fila.
     await asUser(client, bob, async () => {
       const { rows } = await client.query('select * from user_private where user_id = $1', [alice]);

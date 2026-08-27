@@ -31,9 +31,8 @@ Si algo no se puede implementar de verdad todavía, **no se implementa**: se
 documenta como pendiente. Un `EmptyState` honesto es correcto; un feed con
 usuarios inventados no.
 
-La única excepción, y está marcada como tal, es
-`apps/mobile/src/features/dev/DesignHarness.tsx`: una herramienta de diseño
-detrás de `__DEV__` que permite ver cada estado del desafío sin backend.
+Ya no hay excepciones: el harness de diseño que existía en la Fase 1 se
+eliminó cuando la pantalla principal pasó a consumir el backend real.
 
 ## Verificar antes de dar algo por bueno
 
@@ -64,7 +63,7 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 
 | Componente | Estado |
 |---|---|
-| Esquema y RLS | ✅ verificado (81/81) |
+| Esquema y RLS | ✅ verificado (89/89) |
 | Catálogo de objetos | ✅ 45 objetos con alias y criterios visuales |
 | Funciones de dominio (racha, rankings, desafío) | ✅ escritas y probadas |
 | Tipos compartidos y contrato de API | ✅ `packages/shared` |
@@ -76,7 +75,7 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 | Cámara y subida | 🟡 flujo completo; falta App Attest, que necesita un development build |
 | Pipeline de IA y moderación | 🟡 escrito y verificado con dobles; falta ANTHROPIC_API_KEY para probar el modelo real |
 | Amigos y contactos | ✅ búsqueda, solicitudes, bloqueo y matching por hash |
-| Feed | ⬜ siguiente |
+| Feed y privacidad | ✅ paginado por cursor, URLs firmadas, reacciones |
 | Notificaciones push | ⬜ Fase 9 |
 
 ## Decisiones ya tomadas — no rediscutir
@@ -114,6 +113,10 @@ Están razonadas en `docs/`. Cambiarlas es una conversación, no un commit.
 - **La sesión de Supabase no entra en SecureStore de una pieza.** El límite es
   ~2048 bytes y una sesión lo supera, así que `src/services/secure-storage.ts`
   la fragmenta. Sin eso el usuario se desloguea solo, de forma intermitente.
+- **Las tablas del catálogo (`challenge_objects`, `daily_challenges`) NO son
+  legibles por los usuarios**, y eso rompe cualquier consulta que las una. Por
+  eso `submissions.object_display_name` está desnormalizado: el feed necesita
+  el nombre del objeto y no puede leer la tabla que lo esconde.
 - **`pgcrypto` vive en el esquema `extensions`, no en `public`.** Toda función
   que use `digest()` o `gen_random_bytes()` necesita
   `set search_path = public, extensions`, o falla SÓLO en producción. El shim de
