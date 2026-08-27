@@ -188,7 +188,25 @@ El analizador sigue marcando dos cosas, y están bien así:
   tipo de `profiles.username`, que es único y está referenciado. El riesgo de esa
   migración supera al del aviso, que es de higiene y no una vulnerabilidad.
 
-## 10. Pendiente
+## 10. Panel administrativo
+
+Tres garantías, verificadas por aserciones y no por convención:
+
+1. **Quién es administrador lo decide Postgres**, dentro de cada función, no el
+   endpoint. Hay un solo lugar donde se toma esa decisión y no se puede llegar
+   a los datos por otra puerta. El panel usa la clave publicable: no tiene
+   privilegios propios.
+2. **La cola de revisión nunca muestra lo que el clasificador marcó como no
+   apto para revisión humana**, ni siquiera a un administrador. El endpoint de
+   reportes tampoco firma la URL de esas imágenes: no llegan ni como enlace.
+3. **Toda acción queda en `admin_audit_log`** con el antes y el después. Un
+   administrador no puede suspenderse a sí mismo, y un moderador no puede
+   sancionar cuentas — eso es de rol `admin`.
+
+Para dar acceso a alguien: `insert into admin_users (user_id, role) values
+(…, 'moderator')`. No hay forma de auto-otorgarse el rol desde la app.
+
+## 11. Pendiente
 
 Estas piezas están diseñadas pero **no implementadas** todavía (Fases 3–4):
 

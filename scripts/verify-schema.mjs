@@ -29,12 +29,37 @@ function check(name, condition, detail = '') {
   else fail.push(`${name}${detail ? ` — ${detail}` : ''}`);
 }
 
-/** Ejecuta `fn` y devuelve el error de Postgres, o null si no hubo. */
+/** Se asigna en main(); los helpers de este módulo lo necesitan en su ámbito. */
+let client = null;
+let savepointCounter = 0;
+
+/**
+ * Ejecuta `fn` y devuelve el error de Postgres, o null si no hubo.
+ *
+ * Usa un savepoint porque dentro de una transacción un error la aborta entera:
+ * sin esto, cualquier consulta posterior en el mismo bloque falla con
+ * "current transaction is aborted" y el test miente sobre qué se rompió.
+ */
 async function expectError(fn) {
+  const name = `sp_${++savepointCounter}`;
+  let inTransaction = true;
+  try {
+    await client.query(`savepoint ${name}`);
+  } catch (err) {
+    // Fuera de una transacción, SAVEPOINT es un aviso y no un error. Cualquier
+    // otra cosa se reporta: tapar esto fue lo que escondió un ReferenceError.
+    if (!/SAVEPOINT can only be used in transaction blocks/i.test(String(err.message))) {
+      console.warn('[expectError] no se pudo crear el savepoint:', err.message);
+    }
+    inTransaction = false;
+  }
+
   try {
     await fn();
+    if (inTransaction) await client.query(`release savepoint ${name}`);
     return null;
   } catch (err) {
+    if (inTransaction) await client.query(`rollback to savepoint ${name}`).catch(() => {});
     return err;
   }
 }
@@ -66,7 +91,7 @@ async function main() {
   await pg.initialise();
   await pg.start();
 
-  const client = pg.getPgClient();
+  client = pg.getPgClient();
   await client.connect();
 
   try {
@@ -914,6 +939,97 @@ async function main() {
     const { rows: [nowOff] } = await client.query(
       "select is_valid from push_tokens where token = 'ExponentPushToken[silencio]'");
     check('al tercer fallo el token se apaga', nowOff.is_valid === false);
+
+    // ---- panel administrativo (§46) --------------------------------------------
+    const admin = await mkUser('adminuser', '1985-01-01', 'AR');
+    const plain = await mkUser('comun', '1990-06-06', 'AR');
+    await client.query("insert into admin_users (user_id, role) values ($1, 'admin')", [admin]);
+
+    // Sin rol administrativo no se ve nada, y falla ruidosamente.
+    await asUser(client, plain, async () => {
+      const err = await expectError(() => client.query('select admin_metrics()'));
+      check('un usuario común NO puede leer las métricas',
+        err !== null && /forbidden/.test(err.message), err ? err.message : 'fue aceptado');
+      const err2 = await expectError(() => client.query('select * from admin_review_queue()'));
+      check('un usuario común NO puede ver la cola de revisión', err2 !== null);
+    });
+
+    await asUser(client, admin, async () => {
+      const { rows: [m] } = await client.query('select admin_metrics() as m');
+      check('las métricas traen usuarios, actividad, envíos y costo de IA',
+        m.m.users && m.m.activity && m.m.submissions && m.m.ai,
+        JSON.stringify(Object.keys(m.m)));
+    });
+
+    // La regla que protege al equipo: lo marcado como inseguro NO entra en la
+    // cola, ni siquiera para un administrador.
+    const unsafeUser = await mkUser('inseguro', '1990-07-07', 'AR');
+    const { rows: [unsafeSub] } = await client.query(
+      `insert into submissions (user_id, daily_challenge_id, challenge_date, photo_path,
+                                timezone, status, object_display_name)
+       values ($1, $2, ($3::date - 4), 'u/x.webp', 'UTC', 'in_review', 'una taza')
+       returning id`, [unsafeUser, ch.id, today]);
+    await client.query(
+      `insert into moderation_results (submission_id, provider, status, safe_for_human_review, max_score)
+       values ($1, 'test', 'flagged', false, 0.9)`, [unsafeSub.id]);
+
+    const safeUser = await mkUser('seguro', '1990-08-08', 'AR');
+    const { rows: [safeSub] } = await client.query(
+      `insert into submissions (user_id, daily_challenge_id, challenge_date, photo_path,
+                                timezone, status, object_display_name, ai_confidence)
+       values ($1, $2, ($3::date - 5), 's/x.webp', 'UTC', 'in_review', 'una taza', 0.55)
+       returning id`, [safeUser, ch.id, today]);
+    await client.query(
+      `insert into moderation_results (submission_id, provider, status, safe_for_human_review, max_score)
+       values ($1, 'test', 'passed', true, 0.02)`, [safeSub.id]);
+
+    await asUser(client, admin, async () => {
+      const { rows } = await client.query('select submission_id from admin_review_queue()');
+      const ids = rows.map(r => r.submission_id);
+      check('la cola de revisión incluye lo dudoso pero seguro de mirar',
+        ids.includes(safeSub.id), JSON.stringify(ids));
+      check('y NUNCA lo que el clasificador marcó como inseguro',
+        !ids.includes(unsafeSub.id), 'apareció una imagen que no debe verse');
+    });
+
+    // Aceptar en revisión mueve la racha de forma retroactiva.
+    // Se hace con la identidad a nivel de SESIÓN y no con asUser, porque asUser
+    // hace rollback y las aserciones de abajo miran el estado ya escrito.
+    await client.query("select set_config('request.jwt.claim.sub', $1, false)", [admin]);
+    await client.query('select admin_resolve_review($1, true, $2)', [safeSub.id, 'se ve la taza']);
+    const { rows: [restored] } = await client.query(
+      'select current_streak from profiles where id = $1', [safeUser]);
+    check('aceptar una revisión recupera la racha del usuario', restored.current_streak === 1,
+      String(restored.current_streak));
+
+    const { rows: [audited] } = await client.query(
+      "select count(*)::int as n from admin_audit_log where action = 'review_accept' and target_id = $1",
+      [safeSub.id]);
+    check('la acción queda registrada en la auditoría', audited.n === 1);
+
+    // Suspender exige rol de admin, y no se puede sobre uno mismo.
+    const selfErr = await expectError(() => client.query(
+      "select admin_set_account_status($1, 'suspended', 'prueba')", [admin]));
+    check('un administrador no puede suspenderse a sí mismo',
+      selfErr !== null && /cannot_moderate_self/.test(selfErr.message),
+      selfErr ? selfErr.message : 'fue aceptado');
+
+    await client.query("select admin_set_account_status($1, 'suspended', 'prueba')", [plain]);
+    const { rows: [suspended] } = await client.query(
+      'select account_status from profiles where id = $1', [plain]);
+    check('suspender a un usuario cambia su estado', suspended.account_status === 'suspended');
+    await client.query("select set_config('request.jwt.claim.sub', '', false)");
+
+    // Un moderador no puede suspender: eso es de admin.
+    const moderator = await mkUser('moderador', '1988-01-01', 'AR');
+    await client.query("insert into admin_users (user_id, role) values ($1, 'moderator')", [moderator]);
+    await asUser(client, moderator, async () => {
+      const { rows } = await client.query('select submission_id from admin_review_queue()');
+      check('un moderador SÍ puede ver la cola de revisión', Array.isArray(rows));
+      const err = await expectError(() => client.query(
+        "select admin_set_account_status($1, 'banned', 'x')", [safeUser]));
+      check('…pero NO puede banear cuentas', err !== null && /forbidden/.test(err.message));
+    });
 
     // §18 — los datos privados no salen de la propia fila.
     await asUser(client, bob, async () => {

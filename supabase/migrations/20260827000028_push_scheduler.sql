@@ -15,8 +15,17 @@
 -- que pueda leer esa tabla.
 -- =============================================================================
 
-create extension if not exists pg_cron with schema extensions;
-create extension if not exists pg_net with schema extensions;
+-- pg_cron y pg_net existen en Supabase pero no en un Postgres pelado. La
+-- migración tiene que poder aplicarse en los dos: en el entorno de pruebas se
+-- salta la programación y el resto del esquema se verifica igual.
+do $$
+begin
+  create extension if not exists pg_cron with schema extensions;
+  create extension if not exists pg_net with schema extensions;
+exception
+  when others then
+    raise notice 'pg_cron/pg_net no disponibles: se omite la programación (%)', sqlerrm;
+end $$;
 
 -- --- Dónde vive la configuración del programador ------------------------------
 create table if not exists scheduler_config (
@@ -76,21 +85,21 @@ revoke execute on function trigger_challenge_push() from public, anon, authentic
 -- Cada cinco minutos. Más seguido no aporta: el peor retraso posible entre que
 -- abre la ventana y llega el aviso ya es de cinco minutos, sobre una ventana
 -- que dura dos horas.
-select cron.unschedule('mira-challenge-push')
- where exists (select 1 from cron.job where jobname = 'mira-challenge-push');
+do $$
+begin
+  if to_regproc('cron.schedule') is null then
+    raise notice 'pg_cron ausente: los jobs no se programan en este entorno';
+    return;
+  end if;
 
-select cron.schedule(
-  'mira-challenge-push',
-  '*/5 * * * *',
-  $job$ select public.trigger_challenge_push(); $job$
-);
+  perform cron.unschedule('mira-challenge-push')
+    where exists (select 1 from cron.job where jobname = 'mira-challenge-push');
+  perform cron.schedule('mira-challenge-push', '*/5 * * * *',
+    'select public.trigger_challenge_push();');
 
--- Limpieza de los contadores de rate limit, una vez por día.
-select cron.unschedule('mira-purge-rate-limits')
- where exists (select 1 from cron.job where jobname = 'mira-purge-rate-limits');
-
-select cron.schedule(
-  'mira-purge-rate-limits',
-  '17 4 * * *',
-  $job$ select public.purge_rate_limits(); $job$
-);
+  -- Limpieza de los contadores de rate limit, una vez por día.
+  perform cron.unschedule('mira-purge-rate-limits')
+    where exists (select 1 from cron.job where jobname = 'mira-purge-rate-limits');
+  perform cron.schedule('mira-purge-rate-limits', '17 4 * * *',
+    'select public.purge_rate_limits();');
+end $$;

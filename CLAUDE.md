@@ -63,7 +63,7 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 
 | Componente | Estado |
 |---|---|
-| Esquema y RLS | ✅ verificado (109/109) |
+| Esquema y RLS | ✅ verificado (120/120) |
 | Catálogo de objetos | ✅ 45 objetos con alias y criterios visuales |
 | Funciones de dominio (racha, rankings, desafío) | ✅ escritas y probadas |
 | Tipos compartidos y contrato de API | ✅ `packages/shared` |
@@ -71,7 +71,7 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 | Infraestructura | ✅ Supabase (São Paulo) y Vercel creados |
 | Auth, perfiles, onboarding | 🟡 email/contraseña completo y verificado; falta Apple y Google |
 | Backend: desafío diario y cron | 🟡 `GET /api/challenge` y los dos jobs, verificados; falta el resto de la API |
-| Backend: panel admin | ⬜ Fase 10 |
+| Panel administrativo | ✅ métricas, cola de revisión, reportes y sanciones, todo auditado |
 | Cámara y subida | 🟡 flujo completo; falta App Attest, que necesita un development build |
 | Pipeline de IA y moderación | 🟡 escrito y verificado con dobles; falta ANTHROPIC_API_KEY para probar el modelo real |
 | Amigos y contactos | ✅ búsqueda, solicitudes, bloqueo y matching por hash |
