@@ -63,7 +63,7 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 
 | Componente | Estado |
 |---|---|
-| Esquema y RLS | ✅ verificado (89/89) |
+| Esquema y RLS | ✅ verificado (101/101) |
 | Catálogo de objetos | ✅ 45 objetos con alias y criterios visuales |
 | Funciones de dominio (racha, rankings, desafío) | ✅ escritas y probadas |
 | Tipos compartidos y contrato de API | ✅ `packages/shared` |
@@ -76,6 +76,9 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 | Pipeline de IA y moderación | 🟡 escrito y verificado con dobles; falta ANTHROPIC_API_KEY para probar el modelo real |
 | Amigos y contactos | ✅ búsqueda, solicitudes, bloqueo y matching por hash |
 | Feed y privacidad | ✅ paginado por cursor, URLs firmadas, reacciones |
+| Rankings | ✅ mundial, nacional y de amigos, con opt-out respetado |
+| Historial | ✅ calendario del mes con miniaturas |
+| Rachas | ✅ lógica, protectores y estadísticas del perfil |
 | Notificaciones push | ⬜ Fase 9 |
 
 ## Decisiones ya tomadas — no rediscutir

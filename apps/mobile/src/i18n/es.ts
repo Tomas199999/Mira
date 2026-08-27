@@ -64,6 +64,7 @@ export const es = {
     friendCount_one: '{{count}} amigo',
     friendCount_other: '{{count}} amigos',
     signOut: 'Cerrar sesión',
+    participation: 'Participación',
   },
 
   empty: {

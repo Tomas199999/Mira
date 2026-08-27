@@ -206,6 +206,42 @@ try {
     token: carla.token, method: 'POST', body: { submissionId: post?.id, type: 'fire' } });
   check('un desconocido NO puede reaccionar', badReaction.status >= 400, String(badReaction.status));
 
+  // --- rankings, historial y perfil ---------------------------------------------
+  const friendsRank = await api('/api/rankings?scope=friends', { token: ana.token });
+  check('el ranking de amigos responde y se incluye a uno mismo',
+    friendsRank.status === 200 &&
+    (friendsRank.body?.data?.entries ?? []).some((e) => e.isMe),
+    JSON.stringify(friendsRank.body).slice(0, 160));
+
+  const globalRank = await api('/api/rankings?scope=global', { token: ana.token });
+  check('el ranking global responde', globalRank.status === 200, String(globalRank.status));
+
+  const badScope = await api('/api/rankings?scope=marte', { token: ana.token });
+  check('un ámbito de ranking inexistente se rechaza', badScope.status === 404, String(badScope.status));
+
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  const history = await api(`/api/history?month=${thisMonth}`, { token: beto.token });
+  const historyDays = history.body?.data?.days ?? [];
+  check('el historial devuelve los días del mes hasta hoy',
+    history.status === 200 && historyDays.length >= 1,
+    `${historyDays.length} días`);
+  check('el día con foto trae su miniatura firmada',
+    historyDays.some((d) => d.submission?.thumbnailUrl?.includes('token=')),
+    JSON.stringify(historyDays.filter((d) => d.submission).slice(0, 1)));
+
+  const badMonth = await api('/api/history?month=agosto', { token: beto.token });
+  check('un mes mal formado se rechaza', badMonth.status === 404, String(badMonth.status));
+
+  const meProfile = await api('/api/profile/me', { token: beto.token });
+  check('el perfil trae estadísticas y logros',
+    meProfile.status === 200 &&
+    typeof meProfile.body?.data?.stats?.totalCompleted === 'number' &&
+    Array.isArray(meProfile.body?.data?.stats?.achievements),
+    JSON.stringify(meProfile.body?.data?.stats ?? {}).slice(0, 160));
+
+  const noAuthProfile = await api('/api/profile/me');
+  check('el perfil sin sesión responde 401', noAuthProfile.status === 401, String(noAuthProfile.status));
+
 } catch (err) {
   fail.push(`la verificación se cortó: ${err.message}`);
 } finally {

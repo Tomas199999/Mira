@@ -751,6 +751,98 @@ async function main() {
       check('no se puede reaccionar a algo que no se puede ver', err !== null);
     });
 
+    // ---- rankings (§36, §72) --------------------------------------------------
+    const r1 = await mkUser('rank1', '1991-01-01', 'AR');
+    const r2 = await mkUser('rank2', '1991-02-02', 'AR');
+    const r3 = await mkUser('rank3', '1991-03-03', 'UY');
+
+    // best_streak nunca puede quedar por debajo de current_streak: hay un CHECK
+    // que lo impone, así que el sembrado tiene que moverlos juntos.
+    const seedStreak = (id, n) => client.query(
+      'update profiles set current_streak = $2, best_streak = $2, total_completed = $2 where id = $1',
+      [id, n]);
+    await seedStreak(r1, 30);
+    await seedStreak(r2, 20);
+    await seedStreak(r3, 10);
+    await client.query(
+      'update user_settings set show_in_global_ranking = true, show_in_country_ranking = true where user_id = any($1)',
+      [[r1, r2, r3]]);
+    await client.query('select build_ranking_snapshots(current_date)');
+
+    await asUser(client, r2, async () => {
+      const { rows } = await client.query(
+        "select rank, username, is_me from get_ranking_page('global', '', 0, 10)");
+      check('el ranking global ordena por racha descendente',
+        rows[0]?.username === 'rank1' && rows[1]?.username === 'rank2',
+        rows.map(r => `${r.rank}:${r.username}`).join(' '));
+      check('marca cuál de las filas es la del usuario',
+        rows.find(r => r.username === 'rank2')?.is_me === true);
+    });
+
+    await asUser(client, r2, async () => {
+      const { rows: [mine] } = await client.query("select get_my_rank('global') as r");
+      check('la posición propia se puede pedir sin traer el ranking entero',
+        mine.r.rank === 2 && mine.r.total >= 3, JSON.stringify(mine.r));
+    });
+
+    // El ranking nacional separa por país.
+    await asUser(client, r3, async () => {
+      const { rows } = await client.query(
+        "select username from get_ranking_page('country', 'UY', 0, 10)");
+      check('el ranking nacional sólo trae al país pedido',
+        rows.length === 1 && rows[0].username === 'rank3', JSON.stringify(rows));
+    });
+
+    // Quien no optó por aparecer, no entra al snapshot (§72).
+    await client.query('update user_settings set show_in_global_ranking = false where user_id = $1', [r3]);
+    await client.query('select build_ranking_snapshots(current_date)');
+    await asUser(client, r2, async () => {
+      const { rows } = await client.query("select username from get_ranking_page('global', '', 0, 50)");
+      check('quien desactiva el ranking público desaparece de él',
+        !rows.some(r => r.username === 'rank3'), JSON.stringify(rows.map(r => r.username)));
+    });
+
+    // Un bloqueo esconde a la persona del ranking de quien bloqueó.
+    await client.query('insert into blocks (blocker_id, blocked_id) values ($1, $2)', [r2, r1]);
+    await asUser(client, r2, async () => {
+      const { rows } = await client.query("select username from get_ranking_page('global', '', 0, 50)");
+      check('quien bloqueó no ve a la persona bloqueada en el ranking',
+        !rows.some(r => r.username === 'rank1'), JSON.stringify(rows.map(r => r.username)));
+    });
+    await client.query('delete from blocks where blocker_id = $1', [r2]);
+
+    // ---- historial (§20) -------------------------------------------------------
+    const month = today.slice(0, 7);
+    await asUser(client, subUser, async () => {
+      const { rows } = await client.query('select day, outcome from get_history_month($1)', [month]);
+      check('el historial devuelve un día por fecha del mes hasta hoy',
+        rows.length >= 1 && rows.every(r => r.day.toISOString().slice(0, 7) === month),
+        `${rows.length} días`);
+      const hoy = rows.find(r => r.day.toISOString().slice(0, 10) === today);
+      check('el día con foto aceptada figura como completado',
+        hoy?.outcome === 'completed', JSON.stringify(hoy));
+    });
+
+    await asUser(client, r3, async () => {
+      const { rows } = await client.query('select outcome from get_history_month($1)', [month]);
+      check('un día sin desafío no se confunde con un día perdido',
+        rows.every(r => ['no_challenge', 'missed', 'completed', 'late', 'reviewing', 'protected'].includes(r.outcome))
+          && rows.some(r => r.outcome === 'no_challenge'),
+        JSON.stringify([...new Set(rows.map(r => r.outcome))]));
+    });
+
+    // ---- estadísticas (§37) ----------------------------------------------------
+    await asUser(client, subUser, async () => {
+      const { rows: [stats] } = await client.query('select get_my_stats() as s');
+      check('las estadísticas traen racha, total y logros',
+        stats.s.currentStreak >= 1 && stats.s.totalCompleted >= 1
+          && Array.isArray(stats.s.achievements),
+        JSON.stringify({ ...stats.s, achievements: stats.s.achievements.length }));
+      check('la participación es un número entre 0 y 1',
+        Number(stats.s.participationRate) >= 0 && Number(stats.s.participationRate) <= 1,
+        String(stats.s.participationRate));
+    });
+
     // §18 — los datos privados no salen de la propia fila.
     await asUser(client, bob, async () => {
       const { rows } = await client.query('select * from user_private where user_id = $1', [alice]);
@@ -862,9 +954,13 @@ async function main() {
     await client.query('update user_settings set show_in_global_ranking = true where user_id = $1', [alice]);
     await client.query('select build_ranking_snapshots($1::date)', [today]);
     const { rows: ranked } = await client.query(
-      "select user_id, rank from ranking_snapshots where snapshot_date = $1::date and scope = 'global'", [today]);
-    check('sólo entra al ranking global quien lo activó',
-      ranked.length === 1 && ranked[0].user_id === alice, `entraron ${ranked.length}`);
+      "select user_id from ranking_snapshots where snapshot_date = $1::date and scope = 'global'", [today]);
+    const rankedIds = ranked.map(r => r.user_id);
+    // Se comprueba la propiedad, no un conteo: otros tests agregan usuarios y
+    // un número exacto acopla esta aserción al orden de ejecución.
+    check('quien activó el ranking global entra',  rankedIds.includes(alice));
+    check('quien no lo activó queda afuera', !rankedIds.includes(bob),
+      `bob no debería estar entre ${rankedIds.length} entradas`);
 
     // §32 — el bucket de fotos no es público.
     const { rows: [bucket] } = await client.query("select public from storage.buckets where id = 'submissions'");

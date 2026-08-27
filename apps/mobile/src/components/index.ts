@@ -3,6 +3,7 @@ export * from './Card';
 export * from './Countdown';
 export * from './EmptyState';
 export * from './FeedCard';
+export * from './HistoryCalendar';
 export * from './Screen';
 export * from './StreakBadge';
 export * from './Text';

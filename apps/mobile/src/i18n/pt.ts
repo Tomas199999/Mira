@@ -42,6 +42,7 @@ export const pt: Translations = {
     completed: 'Desafios concluídos', myStory: 'Minha história', achievements: 'Conquistas',
     settings: 'Ajustes', friendCount_one: '{{count}} amigo', friendCount_other: '{{count}} amigos',
     signOut: 'Sair',
+    participation: 'Participação',
   },
   empty: {
     noFriendsTitle: 'Você ainda não tem amigos aqui',

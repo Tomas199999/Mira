@@ -42,6 +42,7 @@ export const en: Translations = {
     completed: 'Challenges completed', myStory: 'My story', achievements: 'Achievements',
     settings: 'Settings', friendCount_one: '{{count}} friend', friendCount_other: '{{count}} friends',
     signOut: 'Sign out',
+    participation: 'Participation',
   },
   empty: {
     noFriendsTitle: 'No friends here yet',
