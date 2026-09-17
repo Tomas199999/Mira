@@ -59,6 +59,9 @@ writeFileSync(join(MOBILE, '.env.local'), [
   `EXPO_PUBLIC_SUPABASE_ANON_KEY=${supabaseKey}`,
   `EXPO_PUBLIC_API_BASE_URL=${apiBase}`,
   `EXPO_PUBLIC_ENV=${env.EXPO_PUBLIC_ENV || 'development'}`,
+  // Lo imprime `eas init`; sin él el registro de push no sabe a qué proyecto
+  // pertenece el token. Ver docs/DEPLOYMENT.md § App móvil.
+  ...(env.EAS_PROJECT_ID ? [`EAS_PROJECT_ID=${env.EAS_PROJECT_ID}`] : []),
   '',
 ].join('\n'));
 

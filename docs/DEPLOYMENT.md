@@ -80,15 +80,63 @@ Dos salidas:
 
 ## App móvil
 
+**Los development builds no son opcionales.** App Attest, Play Integrity y el
+registro del token de push no funcionan en Expo Go, así que el flujo de subida
+y las notificaciones necesitan un build propio instalado en el dispositivo.
+Los perfiles están en `apps/mobile/eas.json`; `expo-dev-client` ya está
+instalado y declarado como plugin.
+
+### Primera vez
+
 ```bash
-eas build --profile development --platform ios   # requerido: App Attest no corre en Expo Go
+npm i -g eas-cli
+cd apps/mobile
+eas login                       # cuenta de Expo
+eas init                        # crea el proyecto en EAS e imprime el projectId
+```
+
+`eas init` no puede escribir en `app.config.ts`. Guardá el `projectId` que
+imprime como `EAS_PROJECT_ID=` en el `.env` de la raíz: `app.config.ts` lo
+lee de ahí y `scripts/mobile.mjs` lo pasa a `apps/mobile/.env.local`. Sin él
+`getExpoPushTokenAsync` no sabe a qué proyecto pertenece el token.
+
+Las variables públicas del cliente también tienen que existir en EAS, porque el
+build corre en sus servidores y no ve tu `.env`:
+
+```bash
+eas env:create --scope project --name EXPO_PUBLIC_SUPABASE_URL      --value ... --environment development --visibility plaintext
+eas env:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value ... --environment development --visibility plaintext
+eas env:create --scope project --name EXPO_PUBLIC_API_BASE_URL      --value ... --environment development --visibility plaintext
+eas env:create --scope project --name EAS_PROJECT_ID                --value ... --environment development --visibility plaintext
+```
+
+Repetir para `preview` y `production` con los valores de cada entorno. Sólo
+valores públicos: la clave `service_role` y la de Anthropic **jamás** van acá.
+
+### Development build
+
+```bash
+eas build --profile development --platform ios       # pide la cuenta de Apple Developer
+eas build --profile development --platform android
+```
+
+Instalado el build en el teléfono, `npm run mobile` lo abre solo: con
+`expo-dev-client` instalado, `expo start` apunta al development client en vez
+de a Expo Go (`npx expo start --go` fuerza Expo Go, sin attestation ni push).
+
+Para push en iOS, `eas credentials --platform ios` genera la clave de APNs; en
+Android hace falta el archivo de servicio de FCM del proyecto de Firebase.
+
+### Producción
+
+```bash
 eas build --profile production --platform ios
 eas submit --platform ios
 ```
 
-**Los development builds no son opcionales.** App Attest y Play Integrity no
-funcionan en Expo Go, así que todo el desarrollo del flujo de subida necesita un
-build propio instalado en el dispositivo.
+Antes del primer build firmado: reemplazar el bundle ID provisorio en
+`app.config.ts` (ver el TODO de Fase 16). Cambiarlo después obliga a crear una
+app nueva en App Store.
 
 ## Backend en Vercel — cómo está montado
 

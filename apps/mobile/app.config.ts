@@ -60,6 +60,8 @@ const config: ExpoConfig = {
     'expo-notifications',
     'expo-contacts',
     'expo-camera',
+    // Development build: sin esto no hay App Attest, Play Integrity ni push.
+    'expo-dev-client',
     // TODO(marca): cuando existan el logo y el icono definitivos, agregar acá
     // `image` e `imageWidth`, y `android.adaptiveIcon`. Ver docs/BRAND.md.
     ['expo-splash-screen', { backgroundColor: '#0B0B0D' }],
@@ -68,6 +70,10 @@ const config: ExpoConfig = {
   experiments: { typedRoutes: true },
 
   extra: {
+    // Lo escribe `eas init` la primera vez (docs/DEPLOYMENT.md § App móvil).
+    // Sin esto, getExpoPushTokenAsync no sabe a qué proyecto pertenece el
+    // token y el registro de push falla en silencio.
+    ...(process.env.EAS_PROJECT_ID ? { eas: { projectId: process.env.EAS_PROJECT_ID } } : {}),
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
