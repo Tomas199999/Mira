@@ -11,7 +11,7 @@ npm run verify:schema
 
 Levanta un Postgres embebido, aplica un shim con los objetos que provee
 Supabase (`auth.users`, `auth.uid()`, `storage.*`, los roles), corre todas las
-migraciones y el seed, y después comprueba **24 propiedades de seguridad**
+migraciones y el seed, y después comprueba **129 propiedades de seguridad y dominio**
 conectándose como usuarios distintos. Corre en CI.
 
 ## Por qué tres tablas para un usuario

@@ -10,22 +10,29 @@ realmente ahí, y tu racha sigue viva.
 
 ## Estado
 
-**Fases 1 a 11 de 16.** Lo que está hecho está hecho de verdad; lo que falta, falta —
-no hay nada mockeado haciéndose pasar por funcional (§79 del brief).
+**Las 16 fases tienen trabajo hecho: 11 completas y 5 a medias.** Lo que está
+hecho está hecho de verdad; lo que falta, falta — no hay nada mockeado
+haciéndose pasar por funcional (§79 del brief). Las cinco a medias esperan
+algo que no es código: una clave, un build o una cuenta.
 
-| Componente | Estado |
-|---|---|
-| Esquema de base de datos y RLS | ✅ escrito y **verificado** contra Postgres (101/101 aserciones) |
-| Catálogo de objetos | ✅ 45 objetos curados, con alias y criterios visuales |
-| Funciones de dominio (racha, rankings, desafío) | ✅ escritas y probadas |
-| Tipos compartidos y contrato de API | ✅ |
-| Sistema de diseño y navegación | ✅ compila y empaqueta |
-| Infraestructura | ✅ Supabase (São Paulo) y Vercel creados, desplegados y verificados |
-| Backend (API, cron, admin) | ⬜ Fase 3 |
-| Cámara y subida | ⬜ Fase 5 |
-| Pipeline de IA y moderación | ⬜ Fase 4 |
-| Amigos, contactos, feed | ⬜ Fases 6–7 |
-| Notificaciones push | ⬜ Fase 9 |
+| Fase | Estado | Qué falta |
+|---|---|---|
+| 1 Arquitectura, diseño y navegación | ✅ | |
+| 2 Auth y perfiles | 🟡 | Apple y Google: configurar los proveedores en Supabase |
+| 3 Backend y base de datos | ✅ | RLS en las 30 tablas, verificado (129/129) |
+| 4 Desafío diario | ✅ | |
+| 5 Cámara y subida | 🟡 | App Attest y Play Integrity necesitan un development build de EAS |
+| 6 IA y moderación | 🟡 | `ANTHROPIC_API_KEY` para probar el modelo real |
+| 7 Rachas | ✅ | |
+| 8 Amigos y contactos | ✅ | |
+| 9 Feed y privacidad | ✅ | |
+| 10 Rankings | ✅ | |
+| 11 Historial | ✅ | |
+| 12 Notificaciones | 🟡 | El envío real necesita un development build |
+| 13 Panel administrativo | ✅ | |
+| 14 Testing | ✅ | Falta E2E de la interfaz móvil |
+| 15 Rendimiento y seguridad | ✅ | |
+| 16 App Store y Play Store | 🟡 | Build firmada y cuenta de Play Console |
 
 ## Probarlo en el teléfono
 
@@ -78,7 +85,7 @@ propio cluster y lo borra al terminar.
 apps/mobile      Expo + React Native + TypeScript
 apps/web         Next.js: API REST + panel admin + cron  (Fase 3)
 packages/shared  tipos de dominio, contrato de API, contratos de IA
-supabase/        migraciones, seed y shim de test
+supabase/        migraciones (32), seed y shim de test
 scripts/         verify-schema.mjs
 docs/            arquitectura, base de datos, IA, seguridad, costos, tiendas
 ```

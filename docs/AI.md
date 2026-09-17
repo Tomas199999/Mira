@@ -64,9 +64,23 @@ racha de 60 días. Es, por lejos, la reseña de una estrella más previsible.
 **La regla:** ante la duda, el usuario gana.
 
 - `in_review` **no rompe la racha**. `close_challenge_day()` excluye
-  explícitamente a los usuarios con un envío en revisión.
+  explícitamente a los usuarios con un envío en revisión, y un día en revisión
+  sostiene la cadena: si el usuario sigue jugando, la racha continúa.
 - Si el revisor acepta, la racha se resuelve retroactivamente
-  (`streak_events.event = 'restored'`).
+  (`streak_events.event = 'restored'`): el día suma sin reiniciar lo que se
+  jugó después. Si la racha ya se había cortado después de ese día, aceptarlo
+  no la revive. Si el revisor rechaza, no se corta nada hacia atrás: el
+  beneficio de la duda ya se dio.
+- Un protector gastado también sostiene la cadena. Al día siguiente la racha
+  continúa, no arranca en 1.
+- **Un fallo del servidor tampoco rompe la racha.** `finalize` marca la foto
+  como `processing` recién cuando está en Storage y es una imagen válida. Si a
+  partir de ahí algo falla (el modelo no responde, la función se corta), la
+  foto va a revisión humana con `ai_decision = 'error'`, ya sea desde el
+  propio `catch` o desde `close_challenge_day()` si la función no llegó al
+  `catch`. Precio de esa decisión: en ese caso la moderación automática pudo
+  no haber corrido, así que la cola de revisión puede mostrar una foto sin
+  filtrar. Es raro y se prefiere a cortar una racha por un error propio.
 - El umbral de aceptación es generoso a propósito. Es preferible que se cuele
   algún tramposo antes que castigar a alguien que hizo todo bien.
 

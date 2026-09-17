@@ -42,7 +42,7 @@ aserción de `verify:pipeline`.
 
 ```bash
 npm install
-npm run verify:schema    # Postgres embebido: 47 propiedades de RLS y permisos
+npm run verify:schema    # Postgres embebido: 129 propiedades de RLS, permisos y dominio
 npm run verify:auth      # flujo de alta contra el Supabase real (necesita .env)
 npm run verify:api       # API del desafío; levantá antes el server local en :3210
 npm run verify:pipeline  # imagen y decisiones de IA, sin llamar al modelo
@@ -53,7 +53,7 @@ npm run mobile           # abre Expo
 ```
 
 `verify:schema` **no necesita Docker ni Postgres instalado**: levanta su propio
-cluster, aplica un shim de Supabase, corre las 18 migraciones y comprueba las
+cluster, aplica un shim de Supabase, corre las 32 migraciones y comprueba las
 políticas de seguridad conectándose como usuarios distintos. Después borra todo.
 
 **Si tocás una migración, agregá su aserción a `scripts/verify-schema.mjs`.**
@@ -69,14 +69,14 @@ compile no prueba que el contrato funcione: los dos hallazgos de seguridad del
 
 | Componente | Estado |
 |---|---|
-| Esquema y RLS | ✅ verificado (120/120) |
+| Esquema y RLS | ✅ verificado (129/129) |
 | Catálogo de objetos | ✅ 45 objetos con alias y criterios visuales |
 | Funciones de dominio (racha, rankings, desafío) | ✅ escritas y probadas |
 | Tipos compartidos y contrato de API | ✅ `packages/shared` |
 | Diseño y navegación móvil | ✅ compila y empaqueta |
 | Infraestructura | ✅ Supabase (São Paulo) y Vercel creados |
 | Auth, perfiles, onboarding | 🟡 email/contraseña completo y verificado; falta Apple y Google |
-| Backend: desafío diario y cron | 🟡 `GET /api/challenge` y los dos jobs, verificados; falta el resto de la API |
+| Backend: API y cron | ✅ 25 rutas, tres jobs verificados |
 | Panel administrativo | ✅ métricas, cola de revisión, reportes y sanciones, todo auditado |
 | Cámara y subida | 🟡 flujo completo; falta App Attest, que necesita un development build |
 | Pipeline de IA y moderación | 🟡 escrito y verificado con dobles; falta ANTHROPIC_API_KEY para probar el modelo real |
@@ -168,14 +168,14 @@ Están razonadas en `docs/`. Cambiarlas es una conversación, no un commit.
 - Los mensajes de error que ve el usuario nunca mencionan códigos ni detalles
   técnicos. Comparar con `i18n/es.ts § errors`.
 
-## Sin acceso a producción
+## Acceso a producción
 
-Este entorno **no tiene** las credenciales de Supabase ni de Vercel, y está
-bien así: `verify:schema` alcanza para desarrollar y probar las Fases 2 a 5
-completas contra un Postgres local.
-
-No pidas las claves de producción. Si algo parece necesitarlas, casi siempre
-significa que la lógica debería estar cubierta por un test local.
+El `.env` de la raíz puede tener las credenciales de Supabase (las usan
+`verify:auth`, `verify:api`, `verify:e2e` y `npm run demo`). No las pidas si
+faltan: `verify:schema` alcanza para desarrollar y probar la lógica contra un
+Postgres local, y si algo parece necesitarlas casi siempre significa que
+debería estar cubierto por un test local. Nunca las imprimas ni las copies a
+otro archivo.
 
 ## Documentación
 
@@ -187,4 +187,5 @@ significa que la lógica debería estar cubierta por un test local.
 | `docs/SECURITY.md` | amenazas, RLS, contactos, menores, moderación |
 | `docs/COSTS.md` | qué gasta plata y cómo se controla |
 | `docs/DEPLOYMENT.md` | base, backend, builds |
+| `docs/ENVIRONMENT.md` | variables de entorno y dónde vive cada una |
 | `docs/APP_STORE.md` · `docs/PLAY_STORE.md` | permisos, UGC, privacidad |

@@ -172,18 +172,26 @@ mira/
 
 ## 9. Estado de implementación
 
+La tabla al día, con lo que falta en cada fase, está en el `README.md`. La
+numeración de referencia es la de 16 fases que usan los commits.
+
 | Fase | Qué incluye | Estado |
 |---|---|---|
-| 1 | Arquitectura, esquema, RLS, catálogo, diseño, navegación | **en curso** |
-| 2 | Auth, perfiles, onboarding | pendiente |
-| 3 | Backend del desafío, cámara, subida | pendiente |
-| 4 | Pipeline de IA y moderación | pendiente |
-| 5 | Rachas y rankings | parcial (funciones de base listas y probadas) |
-| 6 | Amigos y contactos | pendiente |
-| 7 | Feed y privacidad | parcial (RLS lista y probada) |
-| 8 | Historial | pendiente |
-| 9 | Notificaciones | pendiente |
-| 10 | Panel admin | pendiente |
-| 11 | Testing, performance, publicación | pendiente |
+| 1 | Arquitectura, diseño, navegación | completa |
+| 2 | Auth, perfiles, onboarding | a medias: faltan Apple y Google |
+| 3 | Backend y base de datos | completa |
+| 4 | Desafío diario | completa |
+| 5 | Cámara y subida | a medias: falta App Attest / Play Integrity |
+| 6 | IA y moderación | a medias: falta probar el modelo real |
+| 7 | Rachas | completa |
+| 8 | Amigos y contactos | completa |
+| 9 | Feed y privacidad | completa |
+| 10 | Rankings | completa |
+| 11 | Historial | completa |
+| 12 | Notificaciones | a medias: falta el envío real |
+| 13 | Panel administrativo | completa |
+| 14 | Testing | completa, sin E2E de la interfaz móvil |
+| 15 | Rendimiento y seguridad | completa |
+| 16 | App Store y Play Store | a medias: falta la build firmada |
 
 Lo marcado como pendiente **no está mockeado**: directamente no está. §79.

@@ -1138,6 +1138,107 @@ async function main() {
     check('perder un día corta la racha actual pero conserva la mejor',
       bobAfter.current_streak === 0 && bobAfter.best_streak === 5, JSON.stringify(bobAfter));
 
+    // 0032 — un protector gastado tiene que sostener la cadena. Antes el
+    // cierre consumía el protector y al día siguiente la racha arrancaba en 1.
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+    const protegido = await mkUser('protegido', '1991-01-01', 'AR');
+    await client.query(
+      `insert into challenge_windows (user_id, daily_challenge_id, challenge_date, opens_at, closes_at, timezone)
+       select $1, id, $2::date, now() - interval '30 hours', now() - interval '28 hours', 'UTC'
+         from daily_challenges where challenge_date = $2::date`, [protegido, yesterday]);
+    await client.query(
+      `update profiles set current_streak = 5, best_streak = 5, last_completed_on = $2::date where id = $1`,
+      [protegido, twoDaysAgo]);
+    await client.query(
+      `insert into streak_protections (user_id, earned_for) values ($1, 'streak_5')`, [protegido]);
+    await client.query('select close_challenge_day($1::date)', [yesterday]);
+    const { rows: [protAfter] } = await client.query(
+      `select p.current_streak,
+              (select count(*)::int from streak_protections where user_id = p.id and used_at is not null) as used
+         from profiles p where p.id = $1`, [protegido]);
+    check('el cierre gasta el protector y conserva la racha',
+      protAfter.current_streak === 5 && protAfter.used === 1, JSON.stringify(protAfter));
+    const { rows: [protNext] } = await client.query(
+      'select apply_streak_increment($1, $2::date, null) as s', [protegido, today]);
+    check('…y al día siguiente la racha continúa en vez de arrancar en 1',
+      protNext.s === 6, `dio ${protNext.s}`);
+
+    // 0032 — una revisión aceptada tarde suma y no pisa lo jugado después.
+    const retro = await mkUser('retro', '1992-02-02', 'AR');
+    const threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+    await client.query('select schedule_daily_challenge($1::date)', [twoDaysAgo]);
+    await client.query(
+      `update profiles set current_streak = 3, best_streak = 3, last_completed_on = $2::date where id = $1`,
+      [retro, threeDaysAgo]);
+    const { rows: [retroSub] } = await client.query(
+      `insert into submissions (user_id, daily_challenge_id, challenge_date, photo_path, timezone, status)
+       select $1, id, $2::date, 'r.webp', 'UTC', 'in_review' from daily_challenges where challenge_date = $2::date
+       returning id`, [retro, twoDaysAgo]);
+    const { rows: [retroD1] } = await client.query(
+      'select apply_streak_increment($1, $2::date, null) as s', [retro, yesterday]);
+    check('un día en revisión sostiene la cadena para el día siguiente', retroD1.s === 4, `dio ${retroD1.s}`);
+    await client.query('select apply_streak_increment($1, $2::date, null)', [retro, today]);
+    const { rows: [retroBack] } = await client.query(
+      'select apply_streak_increment($1, $2::date, $3) as s', [retro, twoDaysAgo, retroSub.id]);
+    const { rows: [retroProfile] } = await client.query(
+      'select current_streak, last_completed_on::text as last from profiles where id = $1', [retro]);
+    check('aceptar la revisión después suma el día sin reiniciar la racha',
+      retroBack.s === 6 && retroProfile.current_streak === 6, JSON.stringify(retroProfile));
+    check('…y no mueve last_completed_on hacia atrás', retroProfile.last === today, retroProfile.last);
+
+    // Si la racha se cortó DESPUÉS del día en revisión, aceptarlo no la revive.
+    const retro2 = await mkUser('retro2', '1993-03-03', 'AR');
+    await client.query(
+      `update profiles set current_streak = 0, best_streak = 3, last_completed_on = $2::date where id = $1`,
+      [retro2, threeDaysAgo]);
+    const { rows: [retro2Sub] } = await client.query(
+      `insert into submissions (user_id, daily_challenge_id, challenge_date, photo_path, timezone, status)
+       select $1, id, $2::date, 'r2.webp', 'UTC', 'in_review' from daily_challenges where challenge_date = $2::date
+       returning id`, [retro2, twoDaysAgo]);
+    await client.query(
+      `insert into streak_events (user_id, challenge_date, event, streak_before, streak_after)
+       values ($1, $2::date, 'reset', 3, 0)`, [retro2, yesterday]);
+    const { rows: [retro2Back] } = await client.query(
+      'select apply_streak_increment($1, $2::date, $3) as s', [retro2, twoDaysAgo, retro2Sub.id]);
+    check('una revisión aceptada tras un corte posterior no revive la racha', retro2Back.s === 0, `dio ${retro2Back.s}`);
+
+    // 0032 — una foto subida sin veredicto es culpa del servidor: va a revisión
+    // y no rompe la racha.
+    const colgado = await mkUser('colgado', '1994-04-04', 'AR');
+    await client.query(
+      `insert into challenge_windows (user_id, daily_challenge_id, challenge_date, opens_at, closes_at, timezone)
+       select $1, id, $2::date, now() - interval '30 hours', now() - interval '28 hours', 'UTC'
+         from daily_challenges where challenge_date = $2::date`, [colgado, yesterday]);
+    await client.query(
+      `update profiles set current_streak = 4, best_streak = 4, last_completed_on = $2::date where id = $1`,
+      [colgado, twoDaysAgo]);
+    const { rows: [colgadoSub] } = await client.query(
+      `insert into submissions (user_id, daily_challenge_id, challenge_date, photo_path, timezone, status)
+       select $1, id, $2::date, 'c.webp', 'UTC', 'processing' from daily_challenges where challenge_date = $2::date
+       returning id`, [colgado, yesterday]);
+    // Y un reintento que sí resolvió: la colgada anterior queda superada, no en revisión.
+    const superado = await mkUser('superado', '1995-05-05', 'AR');
+    await client.query(
+      `insert into submissions (user_id, daily_challenge_id, challenge_date, photo_path, timezone, status, submitted_at)
+       select $1, id, $2::date, s.path, 'UTC', s.st, now() - s.age
+         from daily_challenges, (values ('s1.webp', 'processing'::submission_status, interval '2 hours'),
+                                        ('s2.webp', 'accepted'::submission_status,   interval '1 hour')) as s(path, st, age)
+        where challenge_date = $2::date`, [superado, yesterday]);
+    await client.query('select close_challenge_day($1::date)', [yesterday]);
+    const { rows: [colgadoAfter] } = await client.query(
+      `select s.status, s.ai_decision, p.current_streak,
+              (select completed_at is not null from challenge_windows w
+                where w.user_id = p.id and w.challenge_date = $2::date) as cerrada
+         from submissions s join profiles p on p.id = s.user_id where s.id = $1`, [colgadoSub.id, yesterday]);
+    check('una foto en processing al cierre pasa a revisión con decisión error',
+      colgadoAfter.status === 'in_review' && colgadoAfter.ai_decision === 'error' && colgadoAfter.cerrada === true,
+      JSON.stringify(colgadoAfter));
+    check('…y la racha del usuario no se toca', colgadoAfter.current_streak === 4, String(colgadoAfter.current_streak));
+    const { rows: superadoRows } = await client.query(
+      `select photo_path, status from submissions where user_id = $1 order by photo_path`, [superado]);
+    check('la colgada de un usuario que reintentó con éxito queda expirada, no en revisión',
+      superadoRows[0].status === 'expired' && superadoRows[1].status === 'accepted', JSON.stringify(superadoRows));
+
     // §36 — los rankings se materializan y respetan el opt-out.
     await client.query('update user_settings set show_in_global_ranking = true where user_id = $1', [alice]);
     await client.query('select build_ranking_snapshots($1::date)', [today]);

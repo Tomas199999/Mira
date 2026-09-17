@@ -9,8 +9,9 @@ import { ClaudeModerationProvider } from '@/server/ai/moderation-claude';
 import { StubModerationProvider, StubVisionProvider } from '@/server/ai/vision-stub';
 
 export const dynamic = 'force-dynamic';
-// La cascada de visión puede tardar; sin esto la función se corta a la mitad
-// y la foto queda en 'pending' para siempre.
+// La cascada de visión puede tardar; sin esto la función se corta a la mitad.
+// Si aun así se corta, la foto queda en 'processing' y close_challenge_day la
+// manda a revisión humana en vez de contarla como falta.
 export const maxDuration = 120;
 
 const BUCKET = process.env.STORAGE_BUCKET_SUBMISSIONS ?? 'submissions';
@@ -36,6 +37,11 @@ export async function POST(request: NextRequest) {
   }
 
   const db = adminClient();
+
+  // Se enciende cuando la foto ya está en Storage y es una imagen válida: a
+  // partir de ahí, lo que falle es del servidor y no puede costarle la racha
+  // al usuario.
+  let claimed: string | null = null;
 
   try {
     // 1. El token es de un solo uso y tiene que corresponder a esta publicación.
@@ -72,7 +78,18 @@ export async function POST(request: NextRequest) {
     if (dlError || !blob) return fail('image_invalid', 'uploaded file not found');
 
     const original = Buffer.from(await blob.arrayBuffer());
-    const image = await processImage(original);
+    let image: Awaited<ReturnType<typeof processImage>>;
+    try {
+      image = await processImage(original);
+    } catch (error) {
+      return fail('image_invalid', error instanceof Error ? error.message : String(error));
+    }
+
+    // Desde acá el estado es 'processing'. Si la función se corta antes del
+    // veredicto (timeout, modelo caído), el cierre del día la manda a revisión
+    // en vez de contarla como falta.
+    await db.from('submissions').update({ status: 'processing' }).eq('id', submission.id);
+    claimed = submission.id;
 
     // 4. Pipeline.
     const thresholds = await loadThresholds(db);
@@ -178,8 +195,23 @@ export async function POST(request: NextRequest) {
       detectedObject: outcome.visionCalls.at(-1)?.response.result.detectedObject ?? null,
     });
   } catch (error) {
+    // Ante la duda, gana el usuario: la foto va a una persona y la racha no se
+    // toca. Mejor esfuerzo — si esto también falla, close_challenge_day hace
+    // lo mismo con lo que quedó en 'processing'.
+    if (claimed) await sendToReview(db, claimed);
     return failFromError(error, 'vision_unavailable');
   }
+}
+
+async function sendToReview(db: ReturnType<typeof adminClient>, submissionId: string) {
+  const { error } = await db.rpc('apply_submission_result', {
+    p_submission_id: submissionId,
+    p_status: 'in_review',
+    p_ai_decision: 'error',
+    p_confidence: null,
+    p_moderation: 'error',
+  });
+  if (error) console.error('[finalize] no se pudo mandar a revisión', { submissionId, error: error.message });
 }
 
 function toSubmissionStatus(outcome: string): 'accepted' | 'rejected' | 'in_review' | 'blocked' {
