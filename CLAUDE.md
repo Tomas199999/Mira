@@ -154,6 +154,12 @@ Están razonadas en `docs/`. Cambiarlas es una conversación, no un commit.
 - **Los imports internos de `packages/shared` van sin extensión.** Con `.js`
   TypeScript compila igual pero Metro no resuelve, y el error aparece recién
   al empaquetar.
+- **El `expo-contacts` precompilado de SDK 57 mata la app al abrir.** EAS Build
+  usa módulos precompilados, y el de `expo-contacts` (57.0.5) enlaza contra
+  `Testing.framework`, que no existe en un iPhone: `dyld: Library not loaded`
+  y la app se cierra antes de mostrar nada. Por eso `apps/mobile/package.json`
+  tiene `expo.autolinking.ios.buildFromSource: ["expo-contacts"]`. Se
+  verificó con `otool -L` sobre el `.ipa` que era el único framework afectado.
 - **El diccionario base de i18n no lleva `as const`**: con literales fijos
   ninguna traducción puede asignarse al tipo `Translations`.
 
