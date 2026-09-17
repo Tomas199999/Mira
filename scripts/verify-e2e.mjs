@@ -137,14 +137,21 @@ try {
   });
 
   const hasKey = Boolean(process.env.ANTHROPIC_API_KEY);
+  const accepted = finalize.status === 200 && finalize.body?.data?.status === 'accepted';
+  // Sin clave, el servidor puede estar corriendo con el doble de prueba
+  // (MIRA_STUB_VISION=1, como hace `npm run demo`): acepta sin mirar la foto.
+  const viaStub = !hasKey && accepted;
   if (hasKey) {
-    record('la IA valida la foto y la acepta',
-      finalize.status === 200 && finalize.body?.data?.status === 'accepted',
-      JSON.stringify(finalize.body).slice(0, 200));
+    record('la IA valida la foto y la acepta', accepted, JSON.stringify(finalize.body).slice(0, 200));
+    aiReached = true;
+  } else if (viaStub) {
+    record('el pipeline completa el recorrido con el doble de prueba', true,
+      'MIRA_STUB_VISION=1: la foto NO se analizó');
     aiReached = true;
   } else {
-    // Sin credenciales no se puede llamar al modelo. Que falle EXACTAMENTE en
-    // ese punto es la prueba de que toda la cadena anterior funcionó.
+    // Sin credenciales ni doble no se puede llamar al modelo. Que falle
+    // EXACTAMENTE en ese punto es la prueba de que toda la cadena anterior
+    // funcionó.
     const code = finalize.body?.error?.code;
     record('el pipeline llega hasta la llamada al modelo',
       code === 'vision_unavailable' || finalize.status === 503,
@@ -153,9 +160,9 @@ try {
   }
 
   // ---- 7. Racha, feed e historial -----------------------------------------------------
-  // Cuando no hay clave se fuerza el veredicto para poder seguir el recorrido:
-  // lo que se prueba de acá en adelante no depende del modelo.
-  if (!hasKey) {
+  // Cuando el modelo no se pudo llamar se fuerza el veredicto para poder seguir
+  // el recorrido: lo que se prueba de acá en adelante no depende del modelo.
+  if (!hasKey && !viaStub) {
     await admin.rpc('apply_submission_result', {
       p_submission_id: reservation.submissionId, p_status: 'accepted',
       p_ai_decision: 'accepted', p_confidence: 0.95, p_moderation: 'passed',
@@ -223,8 +230,10 @@ const failed = steps.filter((s) => !s.ok).length;
 console.log('─'.repeat(66));
 console.log(`${steps.length - failed} de ${steps.length} pasos completos`);
 if (!process.env.ANTHROPIC_API_KEY) {
-  console.log(`\n  Nota: sin ANTHROPIC_API_KEY, el modelo no se llamó.`);
-  console.log(`  ${aiReached ? 'El pipeline SÍ llegó hasta ese punto.' : 'El pipeline NO llegó hasta ese punto.'}`);
+  console.log(`\n  Nota: sin ANTHROPIC_API_KEY, el modelo real no se llamó.`);
+  console.log(`  ${aiReached
+    ? 'El pipeline SÍ llegó hasta ese punto (o lo completó con el doble de prueba).'
+    : 'El pipeline NO llegó hasta ese punto.'}`);
 }
 console.log('');
 process.exit(failed ? 1 : 0);

@@ -9,7 +9,7 @@
  *   npm run demo
  */
 import { networkInterfaces } from 'node:os';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -74,6 +74,19 @@ console.log('  Comandos útiles mientras probás:');
 console.log(`    npm run demo:abrir <usuario>   → abre tu ventana del desafío ahora`);
 console.log(`    npm run demo:admin <email>     → te da acceso al panel`);
 console.log(`${line}\n`);
+
+// `next start` sirve la última compilación, no el código: sin este paso
+// arrancaría con un build viejo o directamente no arrancaría.
+console.log('  Compilando el backend…\n');
+const build = spawnSync('npx', ['next', 'build'], {
+  cwd: join(ROOT, 'apps/web'),
+  stdio: 'inherit',
+  env: { ...process.env, ...env },
+});
+if (build.status !== 0) {
+  console.error('\n  La compilación falló; no se puede arrancar el demo.');
+  process.exit(build.status ?? 1);
+}
 
 const child = spawn('npx', ['next', 'start', '-p', String(PORT)], {
   cwd: join(ROOT, 'apps/web'),

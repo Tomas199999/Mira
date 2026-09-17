@@ -6,20 +6,31 @@ import type { VisionProvider, VisionRequest, VisionResponse } from '@mira/shared
  * No mira la foto: acepta cualquier cosa. Existe para poder recorrer el bucle
  * completo sin credenciales de Anthropic, y nada más.
  *
- * Se niega a cargarse fuera de local. Si esto llegara a producción, la
- * validación de fotos sería una mentira, así que el módulo prefiere romper el
- * despliegue antes que funcionar donde no debe.
+ * Se niega a cargarse desplegado. Si esto llegara a producción, la validación
+ * de fotos sería una mentira, así que el módulo prefiere romper el despliegue
+ * antes que funcionar donde no debe.
  */
+/**
+ * La señal es "corre desplegado", no NODE_ENV: `next start` pone
+ * NODE_ENV=production también en la máquina de uno, y con esa condición el
+ * modo demo local nunca pudo validar una foto. Vercel define VERCEL y
+ * VERCEL_ENV en cualquier despliegue, preview incluido, y ahí el doble no
+ * puede existir.
+ */
+function refuseIfDeployed(name: string) {
+  if (process.env.VERCEL || process.env.VERCEL_ENV) {
+    throw new Error(
+      `${name} no puede usarse desplegado. Es un doble de prueba: acepta cualquier foto.`,
+    );
+  }
+}
+
 export class StubVisionProvider implements VisionProvider {
   readonly name = 'stub';
   readonly model = 'stub-no-mira-la-foto';
 
   constructor() {
-    if (process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production') {
-      throw new Error(
-        'StubVisionProvider no puede usarse en producción. Es un doble de prueba: acepta cualquier foto.',
-      );
-    }
+    refuseIfDeployed('StubVisionProvider');
   }
 
   async analyze(request: VisionRequest): Promise<VisionResponse> {
@@ -48,9 +59,7 @@ export class StubModerationProvider {
   readonly name = 'stub';
 
   constructor() {
-    if (process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production') {
-      throw new Error('StubModerationProvider no puede usarse en producción.');
-    }
+    refuseIfDeployed('StubModerationProvider');
   }
 
   async check() {

@@ -158,15 +158,25 @@ try {
   check('ante poca confianza se manda a revisión, no se rechaza',
     review.decision.outcome === 'review', review.decision.outcome);
 
-  // El doble de prueba tiene que negarse a existir en producción. Si alguna vez
-  // se colara, la validación de fotos sería una mentira.
+  // El doble de prueba tiene que negarse a existir desplegado, preview incluido.
+  // Si alguna vez se colara, la validación de fotos sería una mentira.
   const { StubVisionProvider } = await import('../apps/web/src/server/ai/vision-stub.ts');
-  const previous = process.env.NODE_ENV;
-  process.env.NODE_ENV = 'production';
-  let refused = false;
-  try { new StubVisionProvider(); } catch { refused = true; }
-  process.env.NODE_ENV = previous;
-  check('el proveedor de visión simulado se niega a cargarse en producción', refused);
+  const refusedIn = (env) => {
+    const previous = { ...process.env };
+    Object.assign(process.env, env);
+    let refused = false;
+    try { new StubVisionProvider(); } catch { refused = true; }
+    for (const key of Object.keys(env)) delete process.env[key];
+    Object.assign(process.env, previous);
+    return refused;
+  };
+  check('el proveedor de visión simulado se niega a cargarse en producción',
+    refusedIn({ VERCEL: '1', VERCEL_ENV: 'production' }));
+  check('…y también en un preview de Vercel', refusedIn({ VERCEL: '1', VERCEL_ENV: 'preview' }));
+  // `next start` pone NODE_ENV=production también en local: eso solo no puede
+  // bloquearlo, o el modo demo no valida ninguna foto (pasó).
+  check('…pero NODE_ENV=production sin Vercel es la máquina de uno y se permite',
+    !refusedIn({ NODE_ENV: 'production' }));
 
 } catch (err) {
   fail.push(`la verificación se cortó: ${err.message}`);
