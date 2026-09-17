@@ -6,7 +6,7 @@
 
 ## Configuración
 
-- `package`: `com.miraapp.mira` — **inmutable** después del primer envío.
+- `package`: `com.tomaspace.mira` — **inmutable** después del primer envío.
 - Permisos declarados: `CAMERA`, `READ_CONTACTS`, `POST_NOTIFICATIONS`.
 - Permisos **bloqueados** explícitamente en `app.config.ts`: audio, ubicación y
   lectura de la galería. Una librería transitiva puede agregarlos sin que uno se

@@ -19,9 +19,10 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'automatic',
 
   ios: {
-    // TODO(Fase 16): reemplazar por el bundle ID definitivo antes del primer
-    // build firmado. Cambiarlo después obliga a crear una app nueva en App Store.
-    bundleIdentifier: 'com.miraapp.mira',
+    // com.miraapp.mira ya estaba registrado por otro equipo en Apple. Este es
+    // el definitivo: cambiarlo después de crear la app en App Store Connect
+    // obliga a crear una app nueva.
+    bundleIdentifier: 'com.tomaspace.mira',
     supportsTablet: false,
     infoPlist: {
       NSCameraUsageDescription:
@@ -39,7 +40,7 @@ const config: ExpoConfig = {
   },
 
   android: {
-    package: 'com.miraapp.mira',
+    package: 'com.tomaspace.mira',
     // Sólo lo que se usa de verdad. Cada permiso de más es fricción y riesgo.
     permissions: [
       'android.permission.CAMERA',

@@ -8,7 +8,7 @@
 **"Mira" a secas es casi seguro que está tomado en App Store.** Hay que
 verificarlo en App Store Connect antes de fijar nada. Si está ocupado, el nombre
 en la tienda pasa a ser algo como *Mira: Desafío Diario* y la marca dentro de la
-app sigue siendo Mira. El `bundleIdentifier` (`com.miraapp.mira`) **no se puede
+app sigue siendo Mira. El `bundleIdentifier` (`com.tomaspace.mira`) **no se puede
 cambiar** después del primer envío: crear una app nueva sería empezar de cero.
 
 ## Permisos
