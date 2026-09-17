@@ -92,12 +92,12 @@ instalado y declarado como plugin.
 npm i -g eas-cli
 cd apps/mobile
 eas login                       # cuenta de Expo
-eas init                        # crea el proyecto en EAS e imprime el projectId
+eas project:info                # tiene que decir @tomas1111111/mira
 ```
 
-`eas init` no puede escribir en `app.config.ts`. Guardá el `projectId` que
-imprime como `EAS_PROJECT_ID=` en el `.env` de la raíz: `app.config.ts` lo
-lee de ahí y `scripts/mobile.mjs` lo pasa a `apps/mobile/.env.local`. Sin él
+El proyecto ya existe en EAS y su `projectId` está fijo en `app.config.ts`
+(`owner` y `extra.eas.projectId`): `eas init` no puede escribir en un config
+dinámico y `eas-cli` no lee `.env.local`, así que no va por variables. Sin él
 `getExpoPushTokenAsync` no sabe a qué proyecto pertenece el token.
 
 Las variables públicas del cliente también tienen que existir en EAS, porque el
@@ -107,7 +107,6 @@ build corre en sus servidores y no ve tu `.env`:
 eas env:create --scope project --name EXPO_PUBLIC_SUPABASE_URL      --value ... --environment development --visibility plaintext
 eas env:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value ... --environment development --visibility plaintext
 eas env:create --scope project --name EXPO_PUBLIC_API_BASE_URL      --value ... --environment development --visibility plaintext
-eas env:create --scope project --name EAS_PROJECT_ID                --value ... --environment development --visibility plaintext
 ```
 
 Repetir para `preview` y `production` con los valores de cada entorno. Sólo

@@ -10,6 +10,9 @@ import type { ExpoConfig } from 'expo/config';
 const config: ExpoConfig = {
   name: 'Mira',
   slug: 'mira',
+  // Proyecto en EAS (@tomas1111111/mira). No es secreto; lo escribiría
+  // `eas init` si el config fuera estático.
+  owner: 'tomas1111111',
   scheme: 'mira',
   version: '0.1.0',
   orientation: 'portrait',
@@ -70,10 +73,9 @@ const config: ExpoConfig = {
   experiments: { typedRoutes: true },
 
   extra: {
-    // Lo escribe `eas init` la primera vez (docs/DEPLOYMENT.md § App móvil).
     // Sin esto, getExpoPushTokenAsync no sabe a qué proyecto pertenece el
     // token y el registro de push falla en silencio.
-    ...(process.env.EAS_PROJECT_ID ? { eas: { projectId: process.env.EAS_PROJECT_ID } } : {}),
+    eas: { projectId: 'a4f849c1-ab09-413e-acb6-7415f0b34039' },
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
