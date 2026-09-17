@@ -3,6 +3,7 @@
  * Mira — atajos para probar sin esperar.
  *
  *   node --env-file=.env scripts/demo-helpers.mjs abrir <usuario>
+ *   node --env-file=.env scripts/demo-helpers.mjs push
  *   node --env-file=.env scripts/demo-helpers.mjs admin <email>
  */
 import { createClient } from '@supabase/supabase-js';
@@ -11,8 +12,8 @@ const [, , command, argument] = process.argv;
 const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY,
   { auth: { persistSession: false } });
 
-if (!command || !argument) {
-  console.log('Uso: abrir <usuario> | admin <email>');
+if (!command || (command !== 'push' && !argument)) {
+  console.log('Uso: abrir <usuario> | push | admin <email>');
   process.exit(1);
 }
 
@@ -44,6 +45,32 @@ if (command === 'abrir') {
   console.log(`\n  Ventana abierta para @${profile.username}.`);
   console.log(`  El desafío de hoy es: ${objeto}`);
   console.log(`  Cierra en 2 horas. Refrescá la pantalla principal de la app.\n`);
+}
+
+if (command === 'push') {
+  // El mismo job que en producción dispara pg_cron, pero contra el backend
+  // local. Manda el aviso a quien tenga la ventana abierta y sin notificar:
+  // después de `demo:abrir`, eso es tu teléfono.
+  const base = process.env.API_BASE_URL ?? 'http://localhost:3210';
+  const secret = process.env.CRON_SECRET;
+  if (!secret) { console.log('Falta CRON_SECRET en .env.'); process.exit(1); }
+
+  const response = await fetch(`${base}/api/cron/send-challenge-push`, {
+    headers: { Authorization: `Bearer ${secret}` },
+  }).catch((err) => { console.log(`No se pudo llegar a ${base}: ${err.message}. ¿Está corriendo npm run demo?`); process.exit(1); });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.ok) {
+    console.log('El job falló:', JSON.stringify(payload ?? response.status));
+    process.exit(1);
+  }
+
+  const { sent, failed, unregistered } = payload.data;
+  console.log(`\n  Avisos enviados: ${sent} · fallidos: ${failed} · tokens dados de baja: ${unregistered}`);
+  if (sent === 0) {
+    console.log('  Nadie tenía la ventana abierta sin avisar. Corré antes: npm run demo:abrir <usuario>');
+    console.log('  Y fijate que la app haya registrado el token de push (hace falta el development build).');
+  }
+  console.log('');
 }
 
 if (command === 'admin') {

@@ -59,8 +59,14 @@ Mientras probás:
 
 ```bash
 npm run demo:abrir <usuario>   # abre tu ventana del desafío ahora mismo
+npm run demo:push              # manda el aviso push a quien tenga la ventana abierta
 npm run demo:admin <email>     # te da acceso al panel en /admin
 ```
+
+Con **Expo Go** se puede recorrer todo menos el aviso push y App Attest. Para
+eso hace falta el development build instalado en el teléfono
+(`docs/DEPLOYMENT.md § App móvil`); con él, `npm run mobile` abre la app en el
+build en vez de en Expo Go.
 
 Sin `ANTHROPIC_API_KEY`, la validación de fotos usa un **doble de prueba que
 acepta cualquier imagen sin mirarla**. El comando lo dice al arrancar y el
