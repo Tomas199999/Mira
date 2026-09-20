@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import type { DayOutcome, HistoryDay } from '@/features/profile/api';
 import { radius, space, useTheme } from '@/theme';
 import { Text } from './Text';
@@ -10,7 +10,12 @@ import { Text } from './Text';
  * Cada estado tiene su propia forma, no sólo su color: un calendario que
  * distingue sólo por color es ilegible para quien no distingue rojo de verde.
  */
-export function HistoryCalendar({ month, days }: { month: string; days: HistoryDay[] }) {
+export function HistoryCalendar({ month, days, onSelect }: {
+  month: string;
+  days: HistoryDay[];
+  /** Se llama al tocar un día con foto. */
+  onSelect?: (day: HistoryDay) => void;
+}) {
   const theme = useTheme();
 
   const first = new Date(`${month}-01T00:00:00Z`);
@@ -39,11 +44,16 @@ export function HistoryCalendar({ month, days }: { month: string; days: HistoryD
         {cells.map((day, index) => {
           if (!day) return <View key={`empty-${index}`} style={styles.cell} />;
           const thumb = day.submission?.thumbnailUrl;
+          const openable = Boolean(day.submission?.photoUrl && onSelect);
           return (
             <View key={day.date} style={styles.cell}>
-              <View
+              <Pressable
+                accessibilityRole={openable ? 'button' : undefined}
                 accessibilityLabel={`${day.date}: ${labelFor(day.outcome)}`}
-                style={[
+                disabled={!openable}
+                onPress={() => onSelect?.(day)}
+                style={({ pressed }) => [
+                  { opacity: pressed ? 0.7 : 1 },
                   styles.day,
                   {
                     borderColor: borderFor(day.outcome, theme),
@@ -59,7 +69,7 @@ export function HistoryCalendar({ month, days }: { month: string; days: HistoryD
                     {markFor(day.outcome) || String(Number(day.date.slice(-2)))}
                   </Text>
                 )}
-              </View>
+              </Pressable>
             </View>
           );
         })}

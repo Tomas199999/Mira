@@ -1123,6 +1123,26 @@ async function main() {
       aliceStreak.current_streak === 1 && aliceStreak.total_completed === 1,
       JSON.stringify(aliceStreak));
 
+    // 0033 — los logros se otorgan de verdad. Alice completó su primer desafío
+    // y ya tiene una amistad con Bob (más arriba); nada de eso desbloqueaba nada.
+    const { rows: aliceAch } = await client.query(
+      'select code from user_achievements where user_id = $1 order by code', [alice]);
+    const aliceCodes = aliceAch.map(r => r.code);
+    check('completar el primer desafío desbloquea "Primera foto"', aliceCodes.includes('first_photo'), aliceCodes.join(','));
+    check('la primera amistad desbloquea "Primer contacto"', aliceCodes.includes('first_friend'), aliceCodes.join(','));
+    check('…y no se regalan logros que no corresponden',
+      !aliceCodes.some(c => ['streak_3', 'photos_50', 'friends_10', 'early_bird', 'comeback'].includes(c)),
+      aliceCodes.join(','));
+    await client.query("update profiles set best_streak = 7 where id = $1", [alice]);
+    await client.query('select grant_achievements($1)', [alice]);
+    const { rows: aliceAch2 } = await client.query(
+      "select count(*)::int as n from user_achievements where user_id = $1 and code in ('streak_3', 'streak_7')", [alice]);
+    check('una racha de 7 desbloquea los logros de 3 y de 7', aliceAch2[0].n === 2);
+    await asUser(client, alice, async () => {
+      const err = await expectError(() => client.query('select grant_achievements($1)', [alice]));
+      check('un usuario NO puede otorgarse logros', err !== null);
+    });
+
     // §13 — el cierre del día consume protector o corta la racha.
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
     await client.query('select schedule_daily_challenge($1::date)', [yesterday]);

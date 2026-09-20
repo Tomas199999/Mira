@@ -74,7 +74,18 @@ export default function ProfileScreen() {
 
       <Text variant="heading" style={{ marginTop: space.lg }}>{copy.myStory}</Text>
       {days.some((d) => d.submission) ? (
-        <HistoryCalendar month={month} days={days} />
+        <HistoryCalendar
+          month={month}
+          days={days}
+          onSelect={(day) => router.push({
+            pathname: '/photo',
+            params: {
+              uri: day.submission?.photoUrl ?? '',
+              title: day.objectDisplayName ?? '',
+              subtitle: day.date,
+            },
+          })}
+        />
       ) : (
         <EmptyState icon="🗓️" title={t().empty.noPhotosTitle} body={t().empty.noPhotosBody} />
       )}

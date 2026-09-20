@@ -26,7 +26,7 @@ export interface HistoryDay {
   objectDisplayName: string | null;
   outcome: DayOutcome;
   streakAfter: number | null;
-  submission: { id: string; thumbnailUrl: string | null } | null;
+  submission: { id: string; thumbnailUrl: string | null; photoUrl: string | null } | null;
 }
 
 export interface MyProfile {

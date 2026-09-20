@@ -30,8 +30,10 @@ export async function GET(request: NextRequest) {
     if (error) throw new Error(error.message);
 
     const rows = (data ?? []) as HistoryRow[];
+    // Miniatura para el calendario y foto completa para abrirla al tocar el día.
     const signed = await signPaths(
-      rows.map((r) => r.thumbnail_path ?? r.photo_path).filter((p): p is string => Boolean(p)));
+      rows.flatMap((r) => [r.thumbnail_path ?? r.photo_path, r.photo_path])
+        .filter((p): p is string => Boolean(p)));
 
     const days = rows.map((r) => ({
       date: r.day,
@@ -41,6 +43,7 @@ export async function GET(request: NextRequest) {
       submission: r.submission_id ? {
         id: r.submission_id,
         thumbnailUrl: signed.get(r.thumbnail_path ?? r.photo_path ?? '') ?? null,
+        photoUrl: signed.get(r.photo_path ?? '') ?? null,
       } : null,
     }));
 

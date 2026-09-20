@@ -31,9 +31,14 @@ export async function GET(request: NextRequest) {
       await db.rpc('close_challenge_day', { p_date: yesterday });
     if (closeError) throw new Error(`close ${yesterday}: ${closeError.message}`);
 
+    const today = new Date().toISOString().slice(0, 10);
     const { data: ranked, error: rankError } =
-      await db.rpc('build_ranking_snapshots', { p_date: new Date().toISOString().slice(0, 10) });
+      await db.rpc('build_ranking_snapshots', { p_date: today });
     if (rankError) throw new Error(`rankings: ${rankError.message}`);
+
+    // Los logros de ranking salen del snapshot recién armado, en un solo pase.
+    const { error: achError } = await db.rpc('grant_ranking_achievements', { p_date: today });
+    if (achError) throw new Error(`achievements: ${achError.message}`);
 
     return ok({ date: yesterday, streaksClosed: closed, globalRanked: ranked });
   } catch (error) {

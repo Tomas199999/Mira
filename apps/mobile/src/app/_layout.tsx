@@ -58,6 +58,11 @@ function RootNavigator() {
             options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+          {/* Una foto propia a pantalla completa, desde el historial. */}
+          <Stack.Screen
+            name="photo"
+            options={{ presentation: 'fullScreenModal', animation: 'fade' }}
+          />
         </Stack.Protected>
       </Stack>
     </>
