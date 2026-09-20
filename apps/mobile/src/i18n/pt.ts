@@ -55,6 +55,7 @@ export const pt: Translations = {
     noRequestsTitle: 'Nenhuma solicitação pendente',
   },
   auth: {
+    googlePending: 'Google: provedor ainda não configurado.',
     welcomeTitle: 'Entre no Mira',
     welcomeBody: 'Um desafio por dia. Só isso.',
     email: 'Email',

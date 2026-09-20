@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Screen, Text, TextField } from '@/components';
-import { signInWithEmail, signUpWithEmail } from '@/features/auth/api';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { canSignInWithApple, signInWithApple, SignInCancelled, signInWithEmail, signUpWithEmail } from '@/features/auth/api';
 import { isNetworkError, toErrorCode, toUserMessage } from '@/features/auth/errors';
 import { space, useTheme } from '@/theme';
 import { t } from '@/i18n';
@@ -18,6 +19,25 @@ export default function AuthScreen() {
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  useEffect(() => { void canSignInWithApple().then(setAppleAvailable); }, []);
+
+  async function withApple() {
+    setFormError(null);
+    setNotice(null);
+    setBusy(true);
+    try {
+      await signInWithApple();
+      // Con sesión, el AuthProvider lleva al alta de perfil o a la app.
+    } catch (err) {
+      if (!(err instanceof SignInCancelled)) {
+        setFormError(isNetworkError(err) ? t().errors.offline : toUserMessage(err));
+        console.warn('[auth] apple', err);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
   const passwordLongEnough = password.length >= 8;
@@ -99,12 +119,23 @@ export default function AuthScreen() {
         />
       </View>
 
-      {/* Apple y Google llegan en cuanto estén configurados los proveedores en
-          Supabase. No se muestran botones que no funcionan (§79). */}
+      {/* Sólo se muestra donde funciona: iOS con el proveedor configurado en
+          Supabase. Google llega cuando esté configurado; no se muestra un botón
+          que no funciona (§79). */}
+      {appleAvailable ? (
+        <View style={styles.social}>
+          <Text variant="caption" tone="tertiary" center>{copy.or}</Text>
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+            cornerRadius={12}
+            style={styles.apple}
+            onPress={() => void withApple()}
+          />
+        </View>
+      ) : null}
       <View style={[styles.pending, { borderColor: theme.color.border }]}>
-        <Text variant="caption" tone="tertiary" center>
-          Apple y Google: pendientes de configurar el proveedor.
-        </Text>
+        <Text variant="caption" tone="tertiary" center>{copy.googlePending}</Text>
       </View>
     </Screen>
   );
@@ -114,5 +145,7 @@ const styles = StyleSheet.create({
   head: { gap: space.xs, marginTop: space.xxxl, marginBottom: space.xxl },
   brand: { letterSpacing: 3, marginBottom: space.lg },
   form: { gap: space.lg },
-  pending: { marginTop: space.xxxl, paddingTop: space.lg, borderTopWidth: 1 },
+  social: { marginTop: space.xl, gap: space.md },
+  apple: { height: 52, width: '100%' },
+  pending: { marginTop: space.xl, paddingTop: space.lg, borderTopWidth: 1 },
 });

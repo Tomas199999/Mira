@@ -1,5 +1,8 @@
 import type { Session } from '@supabase/supabase-js';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
+import { Platform } from 'react-native';
 import { supabase } from '@/services/supabase';
 
 /**
@@ -52,6 +55,52 @@ export async function completeEmailConfirmation(url: string): Promise<boolean> {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) throw error;
   return true;
+}
+
+/** Sólo iOS 13+; en Android y en el simulador no hay botón. */
+export async function canSignInWithApple(): Promise<boolean> {
+  if (Platform.OS !== 'ios') return false;
+  return AppleAuthentication.isAvailableAsync();
+}
+
+/** El usuario cerró el diálogo de Apple: no es un error que haya que mostrar. */
+export class SignInCancelled extends Error {}
+
+/**
+ * Sign in with Apple, nativo.
+ *
+ * El nonce ata el token de Apple a esta petición: Apple firma el hash y
+ * Supabase compara con el valor en claro. Sin él, un identityToken robado
+ * serviría para entrar desde cualquier lado. Apple devuelve nombre y email
+ * SÓLO la primera vez; el alta de perfil los pide igual, así que no se
+ * dependen de acá.
+ */
+export async function signInWithApple(): Promise<void> {
+  const nonce = Crypto.randomUUID();
+  const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, nonce);
+
+  let credential: AppleAuthentication.AppleAuthenticationCredential;
+  try {
+    credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+      nonce: hashedNonce,
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === 'ERR_REQUEST_CANCELED') throw new SignInCancelled();
+    throw error;
+  }
+
+  if (!credential.identityToken) throw new Error('apple: identityToken missing');
+
+  const { error } = await supabase.auth.signInWithIdToken({
+    provider: 'apple',
+    token: credential.identityToken,
+    nonce,
+  });
+  if (error) throw error;
 }
 
 export async function signInWithEmail(email: string, password: string): Promise<void> {

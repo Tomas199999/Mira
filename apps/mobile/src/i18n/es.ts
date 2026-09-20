@@ -83,6 +83,7 @@ export const es = {
    * dicen qué pasó y qué hacer.
    */
   auth: {
+    googlePending: 'Google: pendiente de configurar el proveedor.',
     welcomeTitle: 'Entrá a Mira',
     welcomeBody: 'Un desafío por día. Nada más.',
     email: 'Email',

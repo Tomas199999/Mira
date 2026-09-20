@@ -65,6 +65,8 @@ const config: ExpoConfig = {
     'expo-notifications',
     'expo-contacts',
     'expo-camera',
+    // Sign in with Apple: la entitlement la agrega este plugin (y usesAppleSignIn).
+    'expo-apple-authentication',
     // Development build: sin esto no hay App Attest, Play Integrity ni push.
     'expo-dev-client',
     // TODO(marca): cuando existan el logo y el icono definitivos, agregar acá

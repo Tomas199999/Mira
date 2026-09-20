@@ -51,6 +51,20 @@ Con Expo Go la app no tiene el esquema `mira://`, así que el link no la abre:
 la cuenta queda confirmada igual y el usuario entra con su contraseña. Con el
 development build entra directo.
 
+### Sign in with Apple
+
+El flujo es nativo (`expo-apple-authentication` → `signInWithIdToken`), así
+que del lado de Supabase no hace falta Services ID ni clave secreta: sólo
+aceptar tokens emitidos para la app.
+
+En el dashboard, **Authentication → Providers → Apple**: activar, y en
+**Client IDs** poner el bundle ID, `com.tomaspace.mira`. Nada más.
+
+Del lado de Apple, el App ID necesita la capacidad *Sign In with Apple*.
+EAS la sincroniza sola a partir de la entitlement (`usesAppleSignIn`) cuando
+administra las credenciales, como hizo con las notificaciones. El botón sólo
+aparece en iOS 13+ y en dispositivo; en Android no existe.
+
 Antes de tocar producción, siempre:
 
 ```bash
