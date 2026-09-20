@@ -16,7 +16,8 @@ const config: ExpoConfig = {
   scheme: 'mira',
   version: '0.1.0',
   orientation: 'portrait',
-  userInterfaceStyle: 'automatic',
+  // Oscura siempre, como una app de cámara. Ver theme/ThemeProvider.tsx.
+  userInterfaceStyle: 'dark',
 
   ios: {
     // com.miraapp.mira ya estaba registrado por otro equipo en Apple. Este es
