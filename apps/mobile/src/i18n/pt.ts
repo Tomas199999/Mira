@@ -112,6 +112,7 @@ export const pt: Translations = {
   },
 
   challenge: {
+    flipCamera: 'Virar a câmera',
     accepted: 'Achamos!',
     acceptedLate: 'Você passou do horário, então não conta para a sequência. Mas a foto fica.',
     streakGrew: 'Sua sequência continua viva.',

@@ -140,6 +140,7 @@ export const es = {
   },
 
   challenge: {
+    flipCamera: 'Dar vuelta la cámara',
     accepted: '¡Lo encontramos!',
     acceptedLate: 'Llegaste fuera de hora, así que no cuenta para la racha. Pero la foto queda.',
     streakGrew: 'Tu racha sigue viva.',

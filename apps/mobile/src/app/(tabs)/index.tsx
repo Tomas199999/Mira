@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import type { ChallengeState } from '@mira/shared';
 import { Button, Card, Countdown, EmptyState, FeedCard, StreakBadge, Text } from '@/components';
@@ -33,7 +33,7 @@ export default function HomeScreen() {
     finally { setLoading(false); setRefreshing(false); setLoadingMore(false); }
   }, [cursor]);
 
-  useEffect(() => { void loadFeed(true); }, []);
+  useFocusEffect(useCallback(() => { void loadFeed(true); }, []));
 
   async function refresh() {
     setRefreshing(true);

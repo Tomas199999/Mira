@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, EmptyState, HistoryCalendar, StreakBadge, Text } from '@/components';
 import { getHistory, getMyProfile, type HistoryDay, type MyProfile } from '@/features/profile/api';
@@ -26,7 +26,7 @@ export default function ProfileScreen() {
     finally { setLoading(false); setRefreshing(false); }
   }, [month]);
 
-  useEffect(() => { void load(); }, [load]);
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   if (loading) {
     return (

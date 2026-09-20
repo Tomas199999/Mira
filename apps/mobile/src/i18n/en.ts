@@ -112,6 +112,7 @@ export const en: Translations = {
   },
 
   challenge: {
+    flipCamera: 'Flip camera',
     accepted: 'Found it!',
     acceptedLate: "You were past the deadline, so it doesn't count for your streak. The photo stays, though.",
     streakGrew: 'Your streak lives on.',

@@ -30,6 +30,7 @@ export default function ChallengeScreen() {
   const { state } = useChallengeState();
   const [permission, requestPermission] = useCameraPermissions();
   const [phase, setPhase] = useState<Phase>({ step: 'camera' });
+  const [facing, setFacing] = useState<'back' | 'front'>('back');
   const camera = useRef<CameraView>(null);
 
   const copy = t().home;
@@ -105,7 +106,17 @@ export default function ChallengeScreen() {
 
       <View style={styles.stage}>
         {phase.step === 'camera' ? (
-          <CameraView ref={camera} style={styles.fill} facing="back" />
+          <>
+            <CameraView ref={camera} style={styles.fill} facing={facing} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t().challenge.flipCamera}
+              onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+              style={[styles.flip, { backgroundColor: theme.color.surface }]}
+            >
+              <Text variant="body">🔄</Text>
+            </Pressable>
+          </>
         ) : phase.step === 'preview' ? (
           <Image source={{ uri: phase.uri }} style={styles.fill} resizeMode="cover" />
         ) : phase.step === 'analyzing' ? (
@@ -210,6 +221,17 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center', justifyContent: 'center', gap: space.md, padding: space.xl },
   message: { maxWidth: 300 },
   controls: { paddingHorizontal: space.lg, paddingTop: space.lg, gap: space.sm, alignItems: 'center' },
+  flip: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.9,
+  },
   shutter: {
     width: 76, height: 76, borderRadius: 38, borderWidth: 3,
     alignItems: 'center', justifyContent: 'center',

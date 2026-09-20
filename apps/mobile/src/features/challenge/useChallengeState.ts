@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import Constants from 'expo-constants';
+import { useFocusEffect } from 'expo-router';
 import type { ChallengeState } from '@mira/shared';
 import { supabase } from '@/services/supabase';
 
@@ -40,7 +41,9 @@ export function useChallengeState() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  // Al volver del desafío la pantalla de abajo no se vuelve a montar: sin
+  // esto seguía mostrando "abierto" con la foto ya aceptada y la racha vieja.
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   return { state, loading, failed, reload: load, setPreviewState: setState };
 }
