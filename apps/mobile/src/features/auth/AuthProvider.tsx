@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
+import * as Linking from 'expo-linking';
 import { supabase } from '@/services/supabase';
-import { hasProfile } from './api';
+import { completeEmailConfirmation, hasProfile } from './api';
 
 /**
  * Estado de sesión de la app.
@@ -70,6 +71,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sub.subscription.unsubscribe();
     };
   }, [resolve]);
+
+  // El link del mail de confirmación abre la app con un código; canjearlo da
+  // la sesión y onAuthStateChange hace el resto. Si falla (link abierto en
+  // otro dispositivo, código vencido), el usuario simplemente inicia sesión.
+  const incomingUrl = Linking.useLinkingURL();
+  useEffect(() => {
+    if (!incomingUrl) return;
+    completeEmailConfirmation(incomingUrl).catch((err) => {
+      console.warn('[auth] no se pudo canjear el código de confirmación', err);
+    });
+  }, [incomingUrl]);
 
   const refresh = useCallback(async () => {
     const { data } = await supabase.auth.getSession();

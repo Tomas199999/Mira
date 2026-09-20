@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
+import * as Linking from 'expo-linking';
 import { supabase } from '@/services/supabase';
 
 /**
@@ -18,12 +19,39 @@ export interface ProfileDraft {
   locale: string;
 }
 
+/**
+ * A dónde vuelve el link del mail de confirmación. Sin esto Supabase manda al
+ * "Site URL" del proyecto, que de fábrica es localhost:3000 y no existe. La
+ * URL tiene que estar en la lista de redirecciones permitidas del proyecto
+ * (docs/DEPLOYMENT.md § Supabase): si no, Supabase la ignora en silencio.
+ */
+export const EMAIL_CONFIRM_PATH = 'auth/confirm';
+
 export async function signUpWithEmail(email: string, password: string): Promise<void> {
   const { error } = await supabase.auth.signUp({
     email: email.trim().toLowerCase(),
     password,
+    options: { emailRedirectTo: Linking.createURL(EMAIL_CONFIRM_PATH) },
   });
   if (error) throw error;
+}
+
+/**
+ * Canjea el código que trae el link del mail por una sesión. Funciona sólo en
+ * el mismo dispositivo que pidió el alta: el verificador PKCE quedó guardado
+ * ahí. Si el link se abre en otro lado, la cuenta igual queda confirmada y el
+ * usuario entra con su contraseña.
+ */
+export async function completeEmailConfirmation(url: string): Promise<boolean> {
+  const parsed = Linking.parse(url);
+  const code = parsed.queryParams?.code;
+  if (typeof code !== 'string' || !code) return false;
+  const path = (parsed.path ?? '').replace(/^\/+/, '');
+  if (path !== EMAIL_CONFIRM_PATH) return false;
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) throw error;
+  return true;
 }
 
 export async function signInWithEmail(email: string, password: string): Promise<void> {

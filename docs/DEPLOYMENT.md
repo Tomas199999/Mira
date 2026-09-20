@@ -32,6 +32,25 @@ Conviene **deshabilitar las claves heredadas** en el dashboard
 (Settings → API Keys): no se usan, y el JWT `service_role` saltea RLS por
 completo.
 
+### URLs de autenticación
+
+El mail de confirmación de cuenta tiene que volver **a la app**, no a una web.
+La app pide el alta con `emailRedirectTo: mira://auth/confirm` y canjea el
+código que trae el link por una sesión. Pero Supabase sólo respeta esa URL si
+está en su lista de redirecciones permitidas; si no, manda al "Site URL", que
+de fábrica es `localhost:3000` y no existe.
+
+En el dashboard, **Authentication → URL Configuration**:
+
+| Campo | Valor |
+|---|---|
+| Site URL | la web pública de Mira cuando exista; hasta entonces, `mira://auth/confirm` |
+| Redirect URLs | `mira://**` |
+
+Con Expo Go la app no tiene el esquema `mira://`, así que el link no la abre:
+la cuenta queda confirmada igual y el usuario entra con su contraseña. Con el
+development build entra directo.
+
 Antes de tocar producción, siempre:
 
 ```bash
