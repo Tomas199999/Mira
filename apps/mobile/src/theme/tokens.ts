@@ -2,35 +2,37 @@
  * Sistema de diseño de Mira.
  *
  * Identidad: la foto es el producto, así que la interfaz se corre del medio.
- * Lienzo casi neutro, un solo acento saturado y mucho aire.
+ * Lienzo oscuro con un dejo verdoso, un solo acento y relieve sólo donde
+ * importa. Dirección "Menta", elegida el 20/09/2026 entre dos propuestas.
  *
  * Regla de color que ordena toda la app:
- *   · LIMA   = acción. El botón que hay que tocar. Uno solo por pantalla.
+ *   · MENTA  = acción. El botón que hay que tocar. Uno solo por pantalla.
  *   · ÁMBAR  = racha. No se usa para nada más, nunca.
  *   · ROJO   = destructivo o error.
  * Si un elemento no es una acción, una racha o un error, es neutro.
  */
 
 export const palette = {
-  // Neutros: la base de todo.
-  ink900: '#0B0B0D',
-  ink800: '#141417',
-  ink700: '#1D1D22',
-  ink600: '#2A2A31',
-  ink500: '#3D3D46',
-  ink400: '#6B6B78',
-  ink300: '#9A9AA6',
-  ink200: '#C9C9D2',
-  ink100: '#E8E8ED',
-  ink50:  '#F5F5F7',
+  // Neutros: negro verdoso, no gris puro. El tinte es lo que los hace parecer
+  // elegidos en vez de heredados.
+  ink900: '#0C1112',
+  ink800: '#131A1C',
+  ink700: '#1A2427',
+  ink600: '#243135',
+  ink500: '#354548',
+  ink400: '#62746F',
+  ink300: '#9FB1AF',
+  ink200: '#C6D2D0',
+  ink100: '#E4EBEA',
+  ink50:  '#F2F6F5',
   white:  '#FFFFFF',
-
   // Acento: acción.
-  lime600: '#8FBF12',
-  lime500: '#AEDD22',
-  lime400: '#C8FF4D',
-  lime300: '#DBFF8A',
-  lime100: '#F0FFCB',
+  mint700: '#118F7E',
+  mint600: '#17B09B',
+  mint500: '#2ACCB5',
+  mint400: '#3EE0C8',
+  mint300: '#8FEDDD',
+  mint100: '#DDF9F3',
 
   // Racha. Reservado.
   amber600: '#C77A00',
@@ -56,7 +58,10 @@ export interface Theme {
     accent: string;
     accentPressed: string;
     onAccent: string;
+    /** Velo del acento: fondo de chips y el brillo detrás de lo importante. */
+    accentSoft: string;
     streak: string;
+    streakSoft: string;
     danger: string;
     info: string;
     /** Velo sobre una foto para que el texto encima se lea. */
@@ -74,13 +79,15 @@ export const darkTheme: Theme = {
     textPrimary: palette.white,
     textSecondary: palette.ink300,
     textTertiary: palette.ink400,
-    accent: palette.lime400,
-    accentPressed: palette.lime500,
+    accent: palette.mint400,
+    accentPressed: palette.mint500,
     onAccent: palette.ink900,
+    accentSoft: 'rgba(62,224,200,0.13)',
     streak: palette.amber500,
+    streakSoft: 'rgba(255,176,32,0.16)',
     danger: palette.red500,
     info: palette.blue500,
-    scrim: 'rgba(11,11,13,0.55)',
+    scrim: 'rgba(12,17,18,0.55)',
   },
 };
 
@@ -94,13 +101,15 @@ export const lightTheme: Theme = {
     textPrimary: palette.ink900,
     textSecondary: palette.ink400,
     textTertiary: palette.ink300,
-    accent: palette.lime600,
-    accentPressed: palette.lime500,
+    accent: palette.mint700,
+    accentPressed: palette.mint600,
     onAccent: palette.white,
+    accentSoft: 'rgba(17,143,126,0.12)',
     streak: palette.amber600,
+    streakSoft: 'rgba(199,122,0,0.14)',
     danger: palette.red500,
     info: palette.blue500,
-    scrim: 'rgba(11,11,13,0.45)',
+    scrim: 'rgba(12,17,18,0.45)',
   },
 };
 

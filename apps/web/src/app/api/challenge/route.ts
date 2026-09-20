@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
-import type { ChallengeState } from '@mira/shared';
-import { authenticate } from '@/server/auth';
+import type { ChallengeState, Submission } from '@mira/shared';
+import { authenticate, type AuthedRequest } from '@/server/auth';
+import { signPaths } from '@/server/images/signed-urls';
 import { fail, failFromError, ok } from '@/server/response';
 
 export const dynamic = 'force-dynamic';
@@ -42,16 +43,20 @@ export async function GET(request: NextRequest) {
     const rows = (data ?? []) as ChallengeRow[];
     const row = rows[0];
 
-    // La racha sólo hace falta cuando el desafío ya está completo; no se paga
-    // una consulta de más en el caso habitual.
+    // La racha y la foto sólo hacen falta cuando el desafío ya está completo;
+    // no se pagan consultas de más en el caso habitual.
     let currentStreak = 0;
+    let submission: Submission | null = null;
     if (row?.completed_at) {
-      const { data: profile } = await auth.db
-        .from('profiles').select('current_streak').eq('id', auth.userId).maybeSingle();
+      const [{ data: profile }, mine] = await Promise.all([
+        auth.db.from('profiles').select('current_streak').eq('id', auth.userId).maybeSingle(),
+        loadMySubmission(auth.db, auth.userId, row.challenge_date),
+      ]);
       currentStreak = profile?.current_streak ?? 0;
+      submission = mine;
     }
 
-    return ok(toChallengeState(row, currentStreak));
+    return ok(toChallengeState(row, currentStreak, submission));
   } catch (error) {
     return failFromError(error);
   }
@@ -64,7 +69,46 @@ export async function GET(request: NextRequest) {
  * El cliente no compara fechas ni decide si la ventana está abierta (§61):
  * el reloj del teléfono se puede cambiar.
  */
-function toChallengeState(row: ChallengeRow | undefined, currentStreak: number): ChallengeState {
+interface MySubmissionRow {
+  submission_id: string; challenge_date: string; object_display: string | null;
+  photo_path: string | null; thumbnail_path: string | null; medium_path: string | null;
+  submitted_at: string; status: Submission['status']; was_late: boolean; counted: boolean;
+}
+
+/** La foto del día, con URLs firmadas, para dibujarla en grande en Inicio. */
+async function loadMySubmission(
+  db: AuthedRequest['db'],
+  userId: string,
+  date: string,
+): Promise<Submission | null> {
+  const { data } = await db.rpc('get_my_submission', { p_date: date });
+  const row = ((data ?? []) as MySubmissionRow[])[0];
+  if (!row) return null;
+
+  const full = row.medium_path ?? row.photo_path;
+  const signed = await signPaths([full, row.thumbnail_path].filter((p): p is string => Boolean(p)));
+  const photoUrl = full ? signed.get(full) : undefined;
+  if (!photoUrl) return null;
+
+  return {
+    id: row.submission_id,
+    userId,
+    challengeDate: row.challenge_date,
+    objectDisplayName: row.object_display ?? '',
+    photoUrl,
+    thumbnailUrl: row.thumbnail_path ? signed.get(row.thumbnail_path) ?? null : null,
+    submittedAt: row.submitted_at,
+    status: row.status,
+    countedForStreak: row.counted,
+    wasLate: row.was_late,
+  };
+}
+
+function toChallengeState(
+  row: ChallengeRow | undefined,
+  currentStreak: number,
+  submission: Submission | null,
+): ChallengeState {
   if (!row) return { kind: 'none' };
 
   if (row.completed_at) {
@@ -72,9 +116,7 @@ function toChallengeState(row: ChallengeRow | undefined, currentStreak: number):
       kind: 'completed',
       challengeDate: row.challenge_date,
       objectDisplayName: row.display_name ?? '',
-      // La foto con su URL firmada la trae GET /api/feed. Acá alcanza con el
-      // estado y la racha, que es lo que dibuja la pantalla principal.
-      submission: null,
+      submission,
       currentStreak,
     };
   }

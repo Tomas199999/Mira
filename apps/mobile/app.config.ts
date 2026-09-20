@@ -68,7 +68,7 @@ const config: ExpoConfig = {
     'expo-dev-client',
     // TODO(marca): cuando existan el logo y el icono definitivos, agregar acá
     // `image` e `imageWidth`, y `android.adaptiveIcon`. Ver docs/BRAND.md.
-    ['expo-splash-screen', { backgroundColor: '#0B0B0D' }],
+    ['expo-splash-screen', { backgroundColor: '#0C1112' }],
   ],
 
   experiments: { typedRoutes: true },

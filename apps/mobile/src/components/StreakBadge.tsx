@@ -18,7 +18,7 @@ export function StreakBadge({ days, size = 'md' }: { days: number; size?: 'sm' |
       style={[
         styles.badge,
         size === 'lg' && styles.lg,
-        { backgroundColor: theme.color.surfaceRaised, borderColor: theme.color.border },
+        { backgroundColor: theme.color.streakSoft, borderColor: 'transparent' },
       ]}
     >
       <Text variant={size === 'lg' ? 'heading' : 'label'}>🔥</Text>

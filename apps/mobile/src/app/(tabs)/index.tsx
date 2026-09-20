@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import type { ChallengeState } from '@mira/shared';
 import { Button, Card, Countdown, EmptyState, FeedCard, StreakBadge, Text } from '@/components';
 import { useChallengeState } from '@/features/challenge/useChallengeState';
 import { getFeed, type FeedEntry } from '@/features/feed/api';
-import { space, useTheme } from '@/theme';
+import { radius, space, useTheme } from '@/theme';
 import { t } from '@/i18n';
 
 /**
@@ -18,6 +19,7 @@ import { t } from '@/i18n';
 export default function HomeScreen() {
   const theme = useTheme();
   const { state, reload } = useChallengeState();
+  const router = useRouter();
   const [feed, setFeed] = useState<FeedEntry[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,13 @@ export default function HomeScreen() {
         loading ? (
           <ActivityIndicator color={theme.color.accent} style={{ marginTop: space.xl }} />
         ) : (
-          <EmptyState icon="👋" title={t().empty.noFriendsTitle} body={t().empty.noFriendsBody} />
+          <EmptyState
+            icon="👋"
+            title={t().empty.noFriendsTitle}
+            body={t().empty.noFriendsBody}
+            actionLabel={t().friends.findContacts}
+            onAction={() => router.push('/friends')}
+          />
         )
       }
       ListFooterComponent={
@@ -112,11 +120,25 @@ function ChallengeCard({ state }: { state: ChallengeState }) {
       );
 
     case 'completed':
+      // La foto del día en grande: es lo que la persona hizo hoy, no un aviso.
       return (
-        <Card raised style={styles.hero}>
-          <Text variant="label" tone="accent">✅ {copy.completedTitle.toUpperCase()}</Text>
-          <Text variant="body" tone="secondary">{state.objectDisplayName}</Text>
-          <StreakBadge days={state.currentStreak} size="lg" />
+        <Card raised style={styles.heroDone}>
+          <View style={styles.doneHead}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text variant="label" tone="accent">{copy.completedTitle.toUpperCase()}</Text>
+              <Text variant="title">{state.objectDisplayName}</Text>
+            </View>
+            <StreakBadge days={state.currentStreak} />
+          </View>
+          {state.submission?.photoUrl ? (
+            <Image
+              source={{ uri: state.submission.photoUrl }}
+              style={styles.donePhoto}
+              contentFit="cover"
+              transition={150}
+              accessibilityLabel={copy.yourPhoto}
+            />
+          ) : null}
         </Card>
       );
 
@@ -145,6 +167,9 @@ const styles = StyleSheet.create({
   header: { gap: space.md },
   brand: { letterSpacing: 3, marginBottom: space.sm },
   hero: { gap: space.md, alignItems: 'center', paddingVertical: space.xl },
+  heroDone: { gap: space.md, padding: space.md },
+  doneHead: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.xs },
+  donePhoto: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md },
   heroBody: { maxWidth: 300 },
   countdown: { alignItems: 'center', gap: space.xs, marginVertical: space.sm },
   feedTitle: { marginTop: space.xl, marginBottom: space.md },
