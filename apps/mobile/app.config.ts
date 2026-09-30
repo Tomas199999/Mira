@@ -19,6 +19,8 @@ const config: ExpoConfig = {
   // Oscura siempre, como una app de cámara. Ver theme/ThemeProvider.tsx.
   userInterfaceStyle: 'dark',
 
+  icon: './assets/icon.png',
+
   ios: {
     // com.miraapp.mira ya estaba registrado por otro equipo en Apple. Este es
     // el definitivo: cambiarlo después de crear la app en App Store Connect
@@ -42,6 +44,10 @@ const config: ExpoConfig = {
 
   android: {
     package: 'com.tomaspace.mira',
+    adaptiveIcon: {
+      foregroundImage: './assets/adaptive-icon.png',
+      backgroundColor: '#0C1112',
+    },
     // Sólo lo que se usa de verdad. Cada permiso de más es fricción y riesgo.
     permissions: [
       'android.permission.CAMERA',
@@ -69,9 +75,12 @@ const config: ExpoConfig = {
     'expo-apple-authentication',
     // Development build: sin esto no hay App Attest, Play Integrity ni push.
     'expo-dev-client',
-    // TODO(marca): cuando existan el logo y el icono definitivos, agregar acá
-    // `image` e `imageWidth`, y `android.adaptiveIcon`. Ver docs/BRAND.md.
-    ['expo-splash-screen', { backgroundColor: '#0C1112' }],
+    ['expo-splash-screen', {
+      image: './assets/splash-icon.png',
+      imageWidth: 140,
+      resizeMode: 'contain',
+      backgroundColor: '#0C1112',
+    }],
   ],
 
   experiments: { typedRoutes: true },

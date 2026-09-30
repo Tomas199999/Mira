@@ -73,3 +73,17 @@ diseño realmente no los guarda. Si eso cambia, cambia la etiqueta.
 
 Configuración lista. El resto depende de fases posteriores: no hay build
 firmada todavía.
+
+## Marca
+
+El ícono es el **iris de un obturador**: un disco menta (`#3EE0C8`) con una
+apertura hexagonal sobre el fondo de la app (`#0C1112`). Lo genera un script a
+partir de geometría, no de un archivo de diseño, así que se puede regenerar en
+cualquier tamaño sin perder nitidez: `scripts/make-icons.mjs`.
+
+| Archivo | Para qué |
+|---|---|
+| `assets/icon.png` | ícono de iOS, 1024×1024 con fondo |
+| `assets/adaptive-icon.png` | capa de frente de Android, con margen para el recorte |
+| `assets/splash-icon.png` | marca de la pantalla de arranque, sin fondo |
+| `assets/favicon.png` | web |
