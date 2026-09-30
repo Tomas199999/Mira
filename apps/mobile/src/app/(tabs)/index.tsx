@@ -117,13 +117,15 @@ function ChallengeCard({ state }: { state: ChallengeState }) {
     case 'none':
     case 'locked':
       return (
-        <Card style={styles.hero}>
+        <Card style={styles.waiting}>
           <View style={[styles.disc, { backgroundColor: theme.color.accentSoft }]}>
-            <Icon name="bell" size={22} tone="accent" />
+            <Icon name="bell" size={20} tone="accent" />
           </View>
-          <Text variant="overline" tone="tertiary">{copy.todayEyebrow}</Text>
-          <Text variant="title" center>{copy.lockedTitle}</Text>
-          <Text variant="body" tone="secondary" center style={styles.heroBody}>{copy.lockedBody}</Text>
+          <View style={styles.waitingText}>
+            <Text variant="overline" tone="tertiary">{copy.todayEyebrow}</Text>
+            <Text variant="heading">{copy.lockedTitle}</Text>
+            <Text variant="caption" tone="tertiary">{copy.lockedBody}</Text>
+          </View>
         </Card>
       );
 
@@ -220,7 +222,9 @@ const styles = StyleSheet.create({
 
   hero: { gap: space.sm, alignItems: 'center', paddingVertical: space.xxl },
   heroBody: { maxWidth: 300 },
-  disc: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', marginBottom: space.xs },
+  waiting: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md },
+  waitingText: { flex: 1, gap: 2 },
+  disc: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
 
   heroOpen: { gap: space.xs, padding: space.xl },
   openTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.md },

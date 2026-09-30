@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { space, useTheme } from '@/theme';
+import { space } from '@/theme';
 import { Button } from './Button';
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
@@ -16,14 +16,11 @@ export function EmptyState({ icon, title, body, actionLabel, onAction }: {
   actionLabel?: string;
   onAction?: () => void;
 }) {
-  const theme = useTheme();
   return (
-    <View style={[styles.wrap, { borderColor: theme.color.border }]}>
-      <View style={[styles.disc, { backgroundColor: theme.color.accentSoft }]}>
-        <Icon name={icon} size={22} tone="accent" />
-      </View>
-      <Text variant="heading" center>{title}</Text>
-      {body ? <Text variant="body" tone="secondary" center style={styles.body}>{body}</Text> : null}
+    <View style={styles.wrap}>
+      <Icon name={icon} size={20} tone="tertiary" />
+      <Text variant="label" center>{title}</Text>
+      {body ? <Text variant="caption" tone="tertiary" center style={styles.body}>{body}</Text> : null}
       {actionLabel && onAction ? (
         <View style={styles.action}>
           <Button label={actionLabel} onPress={onAction} variant="secondary" fullWidth={false} />
@@ -35,11 +32,9 @@ export function EmptyState({ icon, title, body, actionLabel, onAction }: {
 
 const styles = StyleSheet.create({
   wrap: {
-    alignItems: 'center', justifyContent: 'center', gap: space.sm,
-    paddingVertical: space.xxl, paddingHorizontal: space.lg,
-    borderWidth: 1, borderStyle: 'dashed', borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center', gap: space.xs,
+    paddingVertical: space.xl, paddingHorizontal: space.lg,
   },
-  disc: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: space.xs },
-  body: { maxWidth: 280 },
+  body: { maxWidth: 260 },
   action: { marginTop: space.md },
 });
