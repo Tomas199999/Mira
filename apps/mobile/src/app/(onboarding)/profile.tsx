@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { getLocales, getCalendars } from 'expo-localization';
 import { countryByCode, countryName, minimumAgeFor, searchCountries, type Country } from '@mira/shared';
-import { Button, Screen, Text, TextField } from '@/components';
+import { Button, Screen, Text, TextField, Icon } from '@/components';
 import { createProfile, isUsernameAvailable } from '@/features/auth/api';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { isNetworkError, toUserMessage } from '@/features/auth/errors';
@@ -109,9 +109,14 @@ export default function ProfileScreen() {
             <Pressable
               key={c.code}
               onPress={() => { setCountry(c); setPickingCountry(false); setCountryQuery(''); }}
-              style={[styles.countryRow, { borderBottomColor: theme.color.border }]}
+              style={({ pressed }) => [
+                styles.countryRow,
+                { borderBottomColor: theme.color.border },
+                pressed && { backgroundColor: theme.color.surface },
+              ]}
             >
               <Text variant="body">{c.flag}  {countryName(c, locale)}</Text>
+              {country?.code === c.code ? <Icon name="check" size={18} tone="accent" /> : null}
             </Pressable>
           ))}
         </ScrollView>
@@ -143,12 +148,15 @@ export default function ProfileScreen() {
           autoCapitalize="none"
           autoCorrect={false}
           maxLength={20}
-          hint={
-            checking ? t().common.loading
-            : available === true ? copy.usernameAvailable
-            : copy.usernameHint
-          }
+          hint={checking ? t().common.loading : copy.usernameHint}
           error={available === false ? copy.usernameTaken : null}
+          // El visto verde confirma sin tener que leer: es el dato que se
+          // mira de reojo mientras se escribe.
+          accessory={
+            available === true ? <Icon name="check" size={18} tone="accent" />
+            : available === false ? <Icon name="x" size={18} tone="danger" />
+            : null
+          }
         />
 
         <TextField
@@ -163,18 +171,29 @@ export default function ProfileScreen() {
         />
 
         <View style={styles.field}>
-          <Text variant="label" tone="secondary">{copy.country}</Text>
+          <Text variant="overline" tone="tertiary">{copy.country}</Text>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={copy.country}
             onPress={() => setPickingCountry(true)}
-            style={[styles.countryButton, { backgroundColor: theme.color.surface, borderColor: theme.color.border }]}
+            style={({ pressed }) => [
+              styles.countryButton,
+              { backgroundColor: theme.color.surface, borderColor: pressed ? theme.color.accent : 'transparent' },
+            ]}
           >
-            <Text variant="body" tone={country ? 'primary' : 'tertiary'}>
+            <Text variant="body" tone={country ? 'primary' : 'tertiary'} style={styles.countryLabel}>
               {country ? `${country.flag}  ${countryName(country, locale)}` : copy.country}
             </Text>
+            <Icon name="chevron-down" size={18} tone="tertiary" />
           </Pressable>
         </View>
 
-        {formError ? <Text variant="caption" tone="danger">{formError}</Text> : null}
+        {formError ? (
+          <View style={[styles.banner, { backgroundColor: 'rgba(255,77,77,0.12)' }]}>
+            <Icon name="alert-circle" size={16} tone="danger" />
+            <Text variant="caption" tone="danger" style={styles.bannerText}>{formError}</Text>
+          </View>
+        ) : null}
 
         <Button label={copy.createProfile} onPress={submit} loading={busy} disabled={!canSubmit} size="lg" />
       </View>
@@ -216,9 +235,16 @@ const styles = StyleSheet.create({
   form: { gap: space.lg },
   field: { gap: space.xs },
   countryButton: {
-    borderWidth: 1, borderRadius: radius.md,
-    paddingHorizontal: space.lg, paddingVertical: space.md, minHeight: 52, justifyContent: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    borderWidth: 1.5, borderRadius: radius.lg,
+    paddingHorizontal: space.lg, paddingVertical: space.md, minHeight: 54,
   },
+  countryLabel: { flex: 1 },
+  banner: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm, padding: space.md, borderRadius: radius.md },
+  bannerText: { flex: 1 },
   countryList: { flex: 1, marginTop: space.md },
-  countryRow: { paddingVertical: space.md, borderBottomWidth: 1 },
+  countryRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: space.md, paddingHorizontal: space.sm, borderBottomWidth: 1,
+  },
 });
