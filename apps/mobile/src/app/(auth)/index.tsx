@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Screen, Text, TextField } from '@/components';
+import { Button, Icon, Screen, Text, TextField } from '@/components';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { canSignInWithApple, signInWithApple, SignInCancelled, signInWithEmail, signUpWithEmail } from '@/features/auth/api';
 import { isNetworkError, toErrorCode, toUserMessage } from '@/features/auth/errors';
-import { space, useTheme } from '@/theme';
+import { fonts, radius, space, useTheme } from '@/theme';
 import { t } from '@/i18n';
 
 type Mode = 'sign_in' | 'sign_up';
@@ -74,9 +74,11 @@ export default function AuthScreen() {
   return (
     <Screen scroll>
       <View style={styles.head}>
-        <Text variant="caption" tone="tertiary" style={styles.brand}>MIRA</Text>
-        <Text variant="title">{copy.welcomeTitle}</Text>
-        <Text variant="body" tone="secondary">{copy.welcomeBody}</Text>
+        <View style={[styles.mark, { backgroundColor: theme.color.accentSoft }]}>
+          <Icon name="aperture" size={26} tone="accent" />
+        </View>
+        <Text style={[styles.wordmark, { color: theme.color.textPrimary }]}>mira</Text>
+        <Text variant="body" tone="secondary" style={styles.tagline}>{copy.welcomeBody}</Text>
       </View>
 
       <View style={styles.form}>
@@ -101,8 +103,18 @@ export default function AuthScreen() {
           hint={mode === 'sign_up' ? copy.passwordHint : undefined}
         />
 
-        {formError ? <Text variant="caption" tone="danger">{formError}</Text> : null}
-        {notice ? <Text variant="caption" tone="accent">{notice}</Text> : null}
+        {formError ? (
+          <View style={[styles.banner, { backgroundColor: 'rgba(255,77,77,0.12)' }]}>
+            <Icon name="alert-circle" size={16} tone="danger" />
+            <Text variant="caption" tone="danger" style={styles.bannerText}>{formError}</Text>
+          </View>
+        ) : null}
+        {notice ? (
+          <View style={[styles.banner, { backgroundColor: theme.color.accentSoft }]}>
+            <Icon name="mail" size={16} tone="accent" />
+            <Text variant="caption" tone="accent" style={styles.bannerText}>{notice}</Text>
+          </View>
+        ) : null}
 
         <Button
           label={mode === 'sign_in' ? copy.signIn : copy.signUp}
@@ -124,7 +136,11 @@ export default function AuthScreen() {
           que no funciona (§79). */}
       {appleAvailable ? (
         <View style={styles.social}>
-          <Text variant="caption" tone="tertiary" center>{copy.or}</Text>
+          <View style={styles.divider}>
+            <View style={[styles.rule, { backgroundColor: theme.color.border }]} />
+            <Text variant="caption" tone="tertiary">{copy.or}</Text>
+            <View style={[styles.rule, { backgroundColor: theme.color.border }]} />
+          </View>
           <AppleAuthentication.AppleAuthenticationButton
             buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
             buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
@@ -142,9 +158,15 @@ export default function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-  head: { gap: space.xs, marginTop: space.xxxl, marginBottom: space.xxl },
-  brand: { letterSpacing: 3, marginBottom: space.lg },
-  form: { gap: space.lg },
+  head: { alignItems: 'center', gap: space.xs, marginTop: space.xxl, marginBottom: space.xxl },
+  mark: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: space.sm },
+  wordmark: { fontFamily: fonts.display, fontSize: 40, lineHeight: 44, letterSpacing: -1.6 },
+  tagline: { textAlign: 'center', maxWidth: 280 },
+  form: { gap: space.md },
+  banner: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm, padding: space.md, borderRadius: radius.md },
+  bannerText: { flex: 1 },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  rule: { flex: 1, height: 1 },
   social: { marginTop: space.xl, gap: space.md },
   apple: { height: 52, width: '100%' },
   pending: { marginTop: space.xl, paddingTop: space.lg, borderTopWidth: 1 },

@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
-import { Button, Card, Screen, Text } from '@/components';
+import { Camera } from 'expo-camera';
+import * as Contacts from 'expo-contacts';
+import * as Notifications from 'expo-notifications';
+import { Button, Icon, Screen, Text, type IconName } from '@/components';
 import { useAuth } from '@/features/auth/AuthProvider';
-import { space, useTheme } from '@/theme';
+import { radius, space, useTheme } from '@/theme';
 import { t } from '@/i18n';
 
 type PermissionKey = 'camera' | 'notifications' | 'contacts';
@@ -15,23 +18,46 @@ type Status = 'pending' | 'granted' | 'denied';
  * experiencia, no la bloquea. Pedirlos todos juntos al abrir es motivo de
  * rechazo en App Store, además de mala educación.
  *
- * Los pedidos reales se conectan cuando lleguen sus fases: cámara en la 5 y
- * notificaciones en la 9. Hasta entonces esta pantalla explica y deja pasar,
- * en vez de simular un diálogo del sistema que no existe (§79).
+ * Cada fila pide el permiso de verdad. iOS sólo muestra el diálogo una vez:
+ * si ya se decidió antes, `request` devuelve lo decidido sin preguntar, y el
+ * botón manda a Ajustes, que es el único lugar donde se puede cambiar.
  */
+const REQUESTERS: Record<PermissionKey, () => Promise<boolean>> = {
+  camera: async () => (await Camera.requestCameraPermissionsAsync()).granted,
+  notifications: async () => (await Notifications.requestPermissionsAsync()).granted,
+  contacts: async () => (await Contacts.requestPermissionsAsync()).granted,
+};
+
 export default function PermissionsScreen() {
   const theme = useTheme();
   const { refresh } = useAuth();
   const copy = t().onboarding;
+
   const [status, setStatus] = useState<Record<PermissionKey, Status>>({
     camera: 'pending', notifications: 'pending', contacts: 'pending',
   });
+  const [busy, setBusy] = useState<PermissionKey | null>(null);
 
-  const items: Array<{ key: PermissionKey; icon: string; title: string; body: string; phase: string }> = [
-    { key: 'camera',        icon: '📷', title: copy.cameraTitle,        body: copy.cameraBody,        phase: 'Fase 5' },
-    { key: 'notifications', icon: '🔔', title: copy.notificationsTitle, body: copy.notificationsBody, phase: 'Fase 9' },
-    { key: 'contacts',      icon: '👥', title: copy.contactsTitle,      body: copy.contactsBody,      phase: 'Fase 6' },
+  async function ask(key: PermissionKey) {
+    setBusy(key);
+    try {
+      const granted = await REQUESTERS[key]();
+      setStatus((prev) => ({ ...prev, [key]: granted ? 'granted' : 'denied' }));
+    } catch (error) {
+      console.warn('[permisos]', key, error);
+      setStatus((prev) => ({ ...prev, [key]: 'denied' }));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const items: Array<{ key: PermissionKey; icon: IconName; title: string; body: string }> = [
+    { key: 'camera',        icon: 'camera', title: copy.cameraTitle,        body: copy.cameraBody },
+    { key: 'notifications', icon: 'bell',   title: copy.notificationsTitle, body: copy.notificationsBody },
+    { key: 'contacts',      icon: 'users',  title: copy.contactsTitle,      body: copy.contactsBody },
   ];
+
+  const anyDenied = Object.values(status).includes('denied');
 
   return (
     <Screen scroll>
@@ -41,24 +67,46 @@ export default function PermissionsScreen() {
       </View>
 
       <View style={styles.list}>
-        {items.map((item) => (
-          <Card key={item.key} style={styles.card}>
-            <Text variant="heading">{item.icon}  {item.title}</Text>
-            <Text variant="caption" tone="secondary">{item.body}</Text>
-            <Text variant="caption" tone="tertiary">
-              Se solicita en la {item.phase}, cuando la función exista.
-            </Text>
-          </Card>
-        ))}
+        {items.map((item) => {
+          const state = status[item.key];
+          return (
+            <View key={item.key} style={[styles.row, { backgroundColor: theme.color.surface }]}>
+              <View style={[styles.icon, {
+                backgroundColor: state === 'granted' ? theme.color.accentSoft : theme.color.surfaceRaised,
+              }]}>
+                <Icon name={item.icon} size={20} tone={state === 'granted' ? 'accent' : 'secondary'} />
+              </View>
+
+              <View style={styles.text}>
+                <Text variant="label">{item.title}</Text>
+                <Text variant="caption" tone="tertiary">{item.body}</Text>
+              </View>
+
+              {state === 'granted' ? (
+                <View style={[styles.done, { backgroundColor: theme.color.accentSoft }]}>
+                  <Icon name="check" size={16} tone="accent" />
+                </View>
+              ) : (
+                <Button
+                  label={state === 'denied' ? t().common.settings : copy.allow}
+                  variant="secondary"
+                  size="md"
+                  fullWidth={false}
+                  loading={busy === item.key}
+                  onPress={() => state === 'denied' ? void Linking.openSettings() : void ask(item.key)}
+                />
+              )}
+            </View>
+          );
+        })}
       </View>
+
+      {anyDenied ? (
+        <Text variant="caption" tone="tertiary" style={styles.note}>{copy.permissionFailed}</Text>
+      ) : null}
 
       <View style={styles.footer}>
         <Button label={copy.finish} onPress={() => void refresh()} size="lg" />
-        <Button
-          label={t().common.settings}
-          variant="ghost"
-          onPress={() => void Linking.openSettings()}
-        />
       </View>
     </Screen>
   );
@@ -66,7 +114,11 @@ export default function PermissionsScreen() {
 
 const styles = StyleSheet.create({
   head: { gap: space.xs, marginTop: space.xl, marginBottom: space.xl },
-  list: { gap: space.md },
-  card: { gap: space.sm },
+  list: { gap: space.sm },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg },
+  icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  text: { flex: 1, gap: 2 },
+  done: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  note: { marginTop: space.md },
   footer: { marginTop: space.xxl, gap: space.sm },
 });

@@ -125,6 +125,7 @@ export const es = {
   },
 
   onboarding: {
+    permissionFailed: 'No se pudo pedir el permiso. Podés activarlo desde Ajustes.',
     slide1Title: 'Todos los días pasa algo',
     slide1Body: 'A una hora distinta cada día.',
     slide2Title: 'Recibí un desafío inesperado',
@@ -163,6 +164,9 @@ export const es = {
   },
 
   challenge: {
+    attempts: 'Intentos',
+    close: 'Cerrar',
+    sendPhoto: 'Enviar foto',
     flipCamera: 'Dar vuelta la cámara',
     accepted: '¡Lo encontramos!',
     acceptedLate: 'Llegaste fuera de hora, así que no cuenta para la racha. Pero la foto queda.',

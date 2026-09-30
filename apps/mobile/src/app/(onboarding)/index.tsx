@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, View, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button, Screen, Text } from '@/components';
+import { Button, Screen, Text, Icon, type IconName } from '@/components';
 import { radius, space, useTheme } from '@/theme';
 import { t } from '@/i18n';
 
@@ -19,11 +19,11 @@ export default function IntroScreen() {
   const scroller = useRef<ScrollView>(null);
   const width = Dimensions.get('window').width;
 
-  const slides = [
-    { icon: '⏳', title: copy.slide1Title, body: copy.slide1Body },
-    { icon: '📸', title: copy.slide2Title, body: copy.slide2Body },
-    { icon: '🔥', title: copy.slide3Title, body: copy.slide3Body },
-    { icon: '🏅', title: copy.slide4Title, body: copy.slide4Body },
+  const slides: Array<{ icon: IconName; title: string; body: string }> = [
+    { icon: 'bell',   title: copy.slide1Title, body: copy.slide1Body },
+    { icon: 'camera', title: copy.slide2Title, body: copy.slide2Body },
+    { icon: 'zap',    title: copy.slide3Title, body: copy.slide3Body },
+    { icon: 'award',  title: copy.slide4Title, body: copy.slide4Body },
   ];
   const last = page === slides.length - 1;
 
@@ -49,7 +49,9 @@ export default function IntroScreen() {
       >
         {slides.map((slide) => (
           <View key={slide.title} style={[styles.slide, { width }]}>
-            <Text variant="display" center>{slide.icon}</Text>
+            <View style={[styles.icon, { backgroundColor: theme.color.accentSoft }]}>
+              <Icon name={slide.icon} size={30} tone="accent" />
+            </View>
             <Text variant="title" center>{slide.title}</Text>
             <Text variant="body" tone="secondary" center style={styles.body}>{slide.body}</Text>
           </View>
@@ -76,6 +78,7 @@ export default function IntroScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  icon: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', marginBottom: space.md },
   slide: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, paddingHorizontal: space.xl },
   body: { maxWidth: 300 },
   footer: { paddingHorizontal: space.lg, gap: space.xl, paddingBottom: space.md },

@@ -97,6 +97,7 @@ export const pt: Translations = {
   },
 
   onboarding: {
+    permissionFailed: 'Não foi possível pedir a permissão. Você pode ativá-la nos Ajustes.',
     slide1Title: 'Todo dia acontece algo',
     slide1Body: 'Em um horário diferente a cada dia.',
     slide2Title: 'Receba um desafio inesperado',
@@ -135,6 +136,9 @@ export const pt: Translations = {
   },
 
   challenge: {
+    attempts: 'Tentativas',
+    close: 'Fechar',
+    sendPhoto: 'Enviar foto',
     flipCamera: 'Virar a câmera',
     accepted: 'Achamos!',
     acceptedLate: 'Você passou do horário, então não conta para a sequência. Mas a foto fica.',

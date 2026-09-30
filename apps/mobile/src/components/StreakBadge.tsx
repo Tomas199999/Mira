@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { radius, space, useTheme } from '@/theme';
 import { t, tp } from '@/i18n';
+import { Icon } from './Icon';
 import { Text } from './Text';
 
 /**
@@ -21,7 +22,7 @@ export function StreakBadge({ days, size = 'md' }: { days: number; size?: 'sm' |
         { backgroundColor: theme.color.streakSoft, borderColor: 'transparent' },
       ]}
     >
-      <Text variant={size === 'lg' ? 'heading' : 'label'}>🔥</Text>
+      <Icon name="zap" size={size === 'lg' ? 20 : 15} tone="streak" />
       <Text variant={size === 'lg' ? 'heading' : 'label'} tone="streak">{label}</Text>
     </View>
   );

@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useState } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import { radius, space, type, useTheme } from '@/theme';
 import { Text } from './Text';
@@ -14,16 +14,22 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
   { label, error, hint, style, ...rest }, ref,
 ) {
   const theme = useTheme();
-  const borderColor = error ? theme.color.danger : theme.color.border;
+  const [focused, setFocused] = useState(false);
+  // El foco se ve: un campo activo tiene que distinguirse de uno que no lo está.
+  const borderColor = error ? theme.color.danger
+    : focused ? theme.color.accent
+    : 'transparent';
 
   return (
     <View style={styles.wrap}>
-      <Text variant="label" tone="secondary">{label}</Text>
+      <Text variant="overline" tone="tertiary">{label}</Text>
       <TextInput
         ref={ref}
         accessibilityLabel={label}
         placeholderTextColor={theme.color.textTertiary}
         {...rest}
+        onFocus={(e) => { setFocused(true); rest.onFocus?.(e); }}
+        onBlur={(e) => { setFocused(false); rest.onBlur?.(e); }}
         style={[
           styles.input,
           type.body,
@@ -43,7 +49,7 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
 const styles = StyleSheet.create({
   wrap: { gap: space.xs },
   input: {
-    borderWidth: 1, borderRadius: radius.md,
-    paddingHorizontal: space.lg, paddingVertical: space.md, minHeight: 52,
+    borderWidth: 1.5, borderRadius: radius.lg,
+    paddingHorizontal: space.lg, paddingVertical: space.md, minHeight: 54,
   },
 });

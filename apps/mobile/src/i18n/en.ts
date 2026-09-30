@@ -97,6 +97,7 @@ export const en: Translations = {
   },
 
   onboarding: {
+    permissionFailed: 'We could not request the permission. You can enable it in Settings.',
     slide1Title: 'Something happens every day',
     slide1Body: 'At a different time each day.',
     slide2Title: 'Get an unexpected challenge',
@@ -135,6 +136,9 @@ export const en: Translations = {
   },
 
   challenge: {
+    attempts: 'Attempts',
+    close: 'Close',
+    sendPhoto: 'Send photo',
     flipCamera: 'Flip camera',
     accepted: 'Found it!',
     acceptedLate: "You were past the deadline, so it doesn't count for your streak. The photo stays, though.",
