@@ -3,6 +3,9 @@ export const es = {
   tabs: { home: 'Hoy', friends: 'Amigos', rankings: 'Ranking', profile: 'Perfil' },
 
   home: {
+    todayEyebrow: 'Hoy',
+    doneEyebrow: 'Tu foto del día',
+    seeAll: 'Ver todos',
     lockedTitle: 'Hoy va a pasar algo',
     lockedBody: 'En algún momento del día te vamos a avisar qué tenés que fotografiar.',
     openTitle: 'Desafío de hoy',
@@ -20,6 +23,12 @@ export const es = {
   },
 
   streak: {
+    justNow: 'justo ahora',
+    minutesAgo: 'hace {{count}} min',
+    hoursAgo: 'hace {{count}} h',
+    yesterday: 'ayer',
+    daysAgo: 'hace {{count}} días',
+    late: 'fuera de hora',
     days_one: '{{count}} día',
     days_other: '{{count}} días',
     best: 'Mejor racha',
@@ -28,6 +37,7 @@ export const es = {
   },
 
   rankings: {
+    ofTotal: 'de {{total}}',
     global: 'Mundial',
     country: 'Nacional',
     friends: 'Amigos',
@@ -56,7 +66,19 @@ export const es = {
     noMatchesBody: 'Ninguno de tus contactos usa Mira por ahora. Invitalos.',
   },
 
+  calendar: {
+    weekdays: ['L', 'M', 'M', 'J', 'V', 'S', 'D'],
+  },
+
   profile: {
+    streakDays_one: 'día de racha',
+    streakDays_other: 'días de racha',
+    photos: 'Fotos',
+    friends: 'Amigos',
+    protections_one: '{{count}} protector',
+    protections_other: '{{count}} protectores',
+    rankGlobal: 'Mundial',
+    rankCountry: 'País',
     completed: 'Desafíos completados',
     myStory: 'Mi historia',
     achievements: 'Logros',

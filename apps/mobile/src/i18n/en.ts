@@ -3,6 +3,9 @@ import type { Translations } from './es';
 export const en: Translations = {
   tabs: { home: 'Today', friends: 'Friends', rankings: 'Ranking', profile: 'Profile' },
   home: {
+    todayEyebrow: 'Today',
+    doneEyebrow: 'Your photo of the day',
+    seeAll: 'See all',
     lockedTitle: 'Something happens today',
     lockedBody: "At some point today we'll tell you what to photograph.",
     openTitle: "Today's challenge",
@@ -19,10 +22,17 @@ export const en: Translations = {
     friendsToday: 'Today',
   },
   streak: {
+    justNow: 'just now',
+    minutesAgo: '{{count}} min ago',
+    hoursAgo: '{{count}} h ago',
+    yesterday: 'yesterday',
+    daysAgo: '{{count}} days ago',
+    late: 'late',
     days_one: '{{count}} day', days_other: '{{count}} days',
     best: 'Best streak', protected: 'Streak protected', protectionsLeft: 'Protectors: {{count}}',
   },
   rankings: {
+    ofTotal: 'of {{total}}',
     global: 'Global', country: 'Country', friends: 'Friends',
     yourPosition: 'Your position', notParticipating: "You're not showing in this ranking",
     enable: 'Show me in the ranking', updatedAt: 'Updated {{time}}',
@@ -38,7 +48,19 @@ export const en: Translations = {
     noMatchesTitle: 'Nobody yet',
     noMatchesBody: 'None of your contacts use Mira right now. Invite them.',
   },
+  calendar: {
+    weekdays: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+  },
+
   profile: {
+    streakDays_one: 'day streak',
+    streakDays_other: 'day streak',
+    photos: 'Photos',
+    friends: 'Friends',
+    protections_one: '{{count}} protector',
+    protections_other: '{{count}} protectors',
+    rankGlobal: 'Global',
+    rankCountry: 'Country',
     completed: 'Challenges completed', myStory: 'My story', achievements: 'Achievements',
     settings: 'Settings', friendCount_one: '{{count}} friend', friendCount_other: '{{count}} friends',
     signOut: 'Sign out',

@@ -1,13 +1,22 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, EmptyState, HistoryCalendar, StreakBadge, Text } from '@/components';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Avatar, Card, EmptyState, HistoryCalendar, Icon, Text, type IconName } from '@/components';
 import { getHistory, getMyProfile, type HistoryDay, type MyProfile } from '@/features/profile/api';
-import { space, useTheme } from '@/theme';
-import { t, tp } from '@/i18n';
+import { fonts, radius, space, useTheme } from '@/theme';
+import { getLanguage, t, tp } from '@/i18n';
+
+/** Los logros vienen con un emoji de la base; acá se dibujan con el set de la app. */
+const ACHIEVEMENT_ICONS: Record<string, IconName> = {
+  first_photo: 'camera', streak_3: 'zap', streak_7: 'zap', streak_30: 'zap', streak_100: 'zap',
+  photos_50: 'image', photos_100: 'image', top_100_global: 'globe', top_10_country: 'flag',
+  first_friend: 'user-plus', friends_10: 'users', early_bird: 'sunrise', comeback: 'refresh-cw',
+};
 
 export default function ProfileScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const copy = t().profile;
 
@@ -37,42 +46,77 @@ export default function ProfileScreen() {
   }
 
   const stats = me?.stats;
+  const streak = stats?.currentStreak ?? 0;
+  const name = me?.profile.displayName || me?.profile.username || '—';
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.color.background }}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + space.sm }]}
       refreshControl={
         <RefreshControl refreshing={refreshing}
           onRefresh={() => { setRefreshing(true); void load(); }}
           tintColor={theme.color.accent} />
       }
     >
-      <View style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: theme.color.surface, borderColor: theme.color.border }]} />
-        <Text variant="title">{me?.profile.displayName ?? '—'}</Text>
-        <Text variant="body" tone="secondary">@{me?.profile.username ?? '—'}</Text>
-        <StreakBadge days={stats?.currentStreak ?? 0} size="lg" />
+      {/* Identidad */}
+      <View style={styles.identity}>
+        <Avatar name={name} size={64} />
+        <View style={styles.who}>
+          <Text variant="title">{name}</Text>
+          <Text variant="caption" tone="tertiary">
+            @{me?.profile.username ?? '—'}{me?.profile.countryCode ? ` · ${me.profile.countryCode}` : ''}
+          </Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={copy.settings}
+          onPress={() => router.push('/settings')}
+          hitSlop={8}
+          style={({ pressed }) => [styles.iconButton, { backgroundColor: theme.color.surface, opacity: pressed ? 0.7 : 1 }]}
+        >
+          <Icon name="settings" size={18} tone="secondary" />
+        </Pressable>
       </View>
 
-      <Card style={styles.stats}>
-        <Stat label={copy.completed} value={String(stats?.totalCompleted ?? 0)} />
-        <Stat label={t().streak.best} value={String(stats?.bestStreak ?? 0)} />
-        <Stat
-          label={copy.participation}
-          value={`${Math.round((stats?.participationRate ?? 0) * 100)}%`}
-        />
+      {/* Racha: la pieza principal del perfil */}
+      <Card raised style={styles.streakCard}>
+        <View style={styles.streakRow}>
+          <View style={[styles.flame, { backgroundColor: theme.color.streakSoft }]}>
+            <Icon name="zap" size={26} tone="streak" />
+          </View>
+          <View style={styles.streakText}>
+            <Text style={[styles.streakNumber, { color: theme.color.textPrimary }]}>{streak}</Text>
+            <Text variant="label" tone="secondary">{tp(copy, 'streakDays', streak)}</Text>
+          </View>
+          {stats?.protections ? (
+            <View style={[styles.shield, { backgroundColor: theme.color.surface }]}>
+              <Icon name="shield" size={14} tone="secondary" />
+              <Text variant="caption" tone="secondary">{tp(copy, 'protections', stats.protections)}</Text>
+            </View>
+          ) : null}
+        </View>
       </Card>
 
+      {/* Números */}
+      <View style={styles.tiles}>
+        <Tile label={copy.photos} value={stats?.totalCompleted ?? 0} />
+        <Tile label={t().streak.best} value={stats?.bestStreak ?? 0} />
+        <Tile label={copy.friends} value={stats?.friendCount ?? 0} />
+      </View>
+
       {(me?.ranks.global || me?.ranks.country) ? (
-        <Card style={styles.stats}>
-          {me.ranks.global ? <Stat label={t().rankings.global} value={`#${me.ranks.global}`} /> : null}
-          {me.ranks.country ? <Stat label={t().rankings.country} value={`#${me.ranks.country}`} /> : null}
-          <Stat label={t().tabs.friends} value={String(stats?.friendCount ?? 0)} />
-        </Card>
+        <View style={styles.ranks}>
+          {me.ranks.global ? <RankChip icon="globe" label={copy.rankGlobal} rank={me.ranks.global} /> : null}
+          {me.ranks.country ? <RankChip icon="flag" label={copy.rankCountry} rank={me.ranks.country} /> : null}
+        </View>
       ) : null}
 
-      <Text variant="heading" style={{ marginTop: space.lg }}>{copy.myStory}</Text>
+      {/* Historia */}
+      <View style={styles.sectionRow}>
+        <Text variant="heading">{copy.myStory}</Text>
+        <Text variant="caption" tone="tertiary">{monthName(month)}</Text>
+      </View>
       {days.some((d) => d.submission) ? (
         <HistoryCalendar
           month={month}
@@ -87,57 +131,100 @@ export default function ProfileScreen() {
           })}
         />
       ) : (
-        <EmptyState icon="🗓️" title={t().empty.noPhotosTitle} body={t().empty.noPhotosBody} />
+        <EmptyState icon="calendar" title={t().empty.noPhotosTitle} body={t().empty.noPhotosBody} />
       )}
 
+      {/* Logros */}
       {stats?.achievements?.length ? (
         <>
-          <Text variant="heading" style={{ marginTop: space.lg }}>{copy.achievements}</Text>
+          <View style={styles.sectionRow}>
+            <Text variant="heading">{copy.achievements}</Text>
+            <Text variant="caption" tone="tertiary">
+              {stats.achievements.filter((a) => a.unlockedAt).length}/{stats.achievements.length}
+            </Text>
+          </View>
           <View style={styles.badges}>
-            {stats.achievements.map((a) => (
-              <View
-                key={a.code}
-                style={[
-                  styles.badge,
-                  { borderColor: a.unlockedAt ? theme.color.accent : theme.color.border,
-                    opacity: a.unlockedAt ? 1 : 0.4 },
-                ]}
-              >
-                <Text variant="heading">{a.icon}</Text>
-                <Text variant="caption" tone="secondary" center>{a.displayName}</Text>
-              </View>
-            ))}
+            {stats.achievements.map((a) => {
+              const on = Boolean(a.unlockedAt);
+              return (
+                <View
+                  key={a.code}
+                  accessibilityLabel={`${a.displayName}: ${a.description}`}
+                  style={[
+                    styles.badge,
+                    {
+                      backgroundColor: on ? theme.color.accentSoft : theme.color.surface,
+                      borderColor: on ? theme.color.accent : theme.color.border,
+                    },
+                  ]}
+                >
+                  <Icon name={ACHIEVEMENT_ICONS[a.code] ?? 'award'} size={20} tone={on ? 'accent' : 'tertiary'} />
+                  <Text variant="caption" tone={on ? 'primary' : 'tertiary'} center numberOfLines={2}>
+                    {a.displayName}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         </>
       ) : null}
-
-      <View style={styles.account}>
-        <Button label={copy.settings} variant="ghost" onPress={() => router.push('/settings')} />
-      </View>
     </ScrollView>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Tile({ label, value }: { label: string; value: number }) {
+  const theme = useTheme();
   return (
-    <View style={styles.stat}>
-      <Text variant="heading">{value}</Text>
-      <Text variant="caption" tone="secondary" center>{label}</Text>
+    <View style={[styles.tile, { backgroundColor: theme.color.surface }]}>
+      <Text style={[styles.tileValue, { color: theme.color.textPrimary }]}>{value}</Text>
+      <Text variant="caption" tone="tertiary">{label}</Text>
     </View>
   );
 }
 
+function RankChip({ icon, label, rank }: { icon: IconName; label: string; rank: number }) {
+  const theme = useTheme();
+  return (
+    <View style={[styles.rank, { backgroundColor: theme.color.surface }]}>
+      <Icon name={icon} size={14} tone="secondary" />
+      <Text variant="caption" tone="secondary">{label}</Text>
+      <Text variant="label">#{rank}</Text>
+    </View>
+  );
+}
+
+function monthName(month: string): string {
+  const locale = { es: 'es-AR', en: 'en-US', pt: 'pt-BR' }[getLanguage()] ?? 'es-AR';
+  const text = new Date(`${month}-01T12:00:00Z`).toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 const styles = StyleSheet.create({
-  content: { padding: space.lg, paddingTop: space.xxxl, paddingBottom: space.huge, gap: space.md },
+  content: { paddingHorizontal: space.lg, paddingBottom: space.huge, gap: space.md },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { alignItems: 'center', gap: space.sm, marginBottom: space.lg },
-  avatar: { width: 88, height: 88, borderRadius: 44, borderWidth: 1 },
-  stats: { flexDirection: 'row', justifyContent: 'space-around' },
-  stat: { alignItems: 'center', gap: space.xs, flex: 1 },
+
+  identity: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.xs, marginBottom: space.xs },
+  who: { flex: 1, gap: 2 },
+  iconButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+
+  streakCard: { padding: space.lg },
+  streakRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  flame: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  streakText: { flex: 1 },
+  streakNumber: { fontFamily: fonts.display, fontSize: 44, lineHeight: 48, letterSpacing: -1.5, fontVariant: ['tabular-nums'] },
+  shield: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 10, borderRadius: radius.pill },
+
+  tiles: { flexDirection: 'row', gap: space.sm },
+  tile: { flex: 1, borderRadius: radius.lg, padding: space.md, gap: 2 },
+  tileValue: { fontFamily: fonts.displayBold, fontSize: 24, lineHeight: 28, fontVariant: ['tabular-nums'] },
+
+  ranks: { flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' },
+  rank: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: radius.pill },
+
+  sectionRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: space.lg, paddingHorizontal: space.xs },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   badge: {
-    width: 88, aspectRatio: 1, borderRadius: 12, borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center', gap: space.xs, padding: space.xs,
+    width: '31%', flexGrow: 1, aspectRatio: 1.15, borderRadius: radius.lg, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center', gap: space.xs, padding: space.sm,
   },
-  account: { marginTop: space.xxl },
 });

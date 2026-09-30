@@ -3,6 +3,9 @@ import type { Translations } from './es';
 export const pt: Translations = {
   tabs: { home: 'Hoje', friends: 'Amigos', rankings: 'Ranking', profile: 'Perfil' },
   home: {
+    todayEyebrow: 'Hoje',
+    doneEyebrow: 'Sua foto do dia',
+    seeAll: 'Ver todos',
     lockedTitle: 'Hoje vai acontecer algo',
     lockedBody: 'Em algum momento do dia avisamos o que você precisa fotografar.',
     openTitle: 'Desafio de hoje',
@@ -19,10 +22,17 @@ export const pt: Translations = {
     friendsToday: 'Hoje',
   },
   streak: {
+    justNow: 'agora mesmo',
+    minutesAgo: 'há {{count}} min',
+    hoursAgo: 'há {{count}} h',
+    yesterday: 'ontem',
+    daysAgo: 'há {{count}} dias',
+    late: 'fora de hora',
     days_one: '{{count}} dia', days_other: '{{count}} dias',
     best: 'Melhor sequência', protected: 'Sequência protegida', protectionsLeft: 'Protetores: {{count}}',
   },
   rankings: {
+    ofTotal: 'de {{total}}',
     global: 'Mundial', country: 'Nacional', friends: 'Amigos',
     yourPosition: 'Sua posição', notParticipating: 'Você não aparece neste ranking',
     enable: 'Aparecer no ranking', updatedAt: 'Atualizado {{time}}',
@@ -38,7 +48,19 @@ export const pt: Translations = {
     noMatchesTitle: 'Ninguém ainda',
     noMatchesBody: 'Nenhum dos seus contatos usa o Mira por enquanto. Convide.',
   },
+  calendar: {
+    weekdays: ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'],
+  },
+
   profile: {
+    streakDays_one: 'dia de sequência',
+    streakDays_other: 'dias de sequência',
+    photos: 'Fotos',
+    friends: 'Amigos',
+    protections_one: '{{count}} protetor',
+    protections_other: '{{count}} protetores',
+    rankGlobal: 'Mundial',
+    rankCountry: 'País',
     completed: 'Desafios concluídos', myStory: 'Minha história', achievements: 'Conquistas',
     settings: 'Ajustes', friendCount_one: '{{count}} amigo', friendCount_other: '{{count}} amigos',
     signOut: 'Sair',

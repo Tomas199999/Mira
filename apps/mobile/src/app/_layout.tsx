@@ -1,5 +1,14 @@
+import { useEffect } from 'react';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import {
+  BricolageGrotesque_600SemiBold, BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold,
+} from '@expo-google-fonts/bricolage-grotesque';
+import {
+  InstrumentSans_400Regular, InstrumentSans_500Medium, InstrumentSans_600SemiBold, InstrumentSans_700Bold,
+} from '@expo-google-fonts/instrument-sans';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -69,7 +78,24 @@ function RootNavigator() {
   );
 }
 
+// La pantalla de arranque se queda hasta que las fuentes estén: un primer
+// cuadro con la tipografía del sistema y después un salto es lo que hace que
+// una app se sienta barata.
+void SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
+  const [fontsReady, fontsError] = useFonts({
+    BricolageGrotesque_600SemiBold, BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold,
+    InstrumentSans_400Regular, InstrumentSans_500Medium, InstrumentSans_600SemiBold, InstrumentSans_700Bold,
+  });
+
+  useEffect(() => {
+    if (fontsReady || fontsError) void SplashScreen.hideAsync();
+  }, [fontsReady, fontsError]);
+
+  // Si una fuente falla, la app arranca igual con la del sistema: peor, no rota.
+  if (!fontsReady && !fontsError) return null;
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

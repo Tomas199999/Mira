@@ -1,7 +1,9 @@
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { DayOutcome, HistoryDay } from '@/features/profile/api';
+import { t } from '@/i18n';
 import { radius, space, useTheme } from '@/theme';
+import { Icon } from './Icon';
 import { Text } from './Text';
 
 /**
@@ -23,6 +25,7 @@ export function HistoryCalendar({ month, days, onSelect }: {
   const leading = (first.getUTCDay() + 6) % 7;
   const byDay = new Map(days.map((d) => [d.date, d]));
   const total = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+  const today = new Date().toISOString().slice(0, 10);
 
   const cells: Array<HistoryDay | null> = [
     ...Array.from({ length: leading }, () => null),
@@ -35,7 +38,7 @@ export function HistoryCalendar({ month, days, onSelect }: {
   return (
     <View>
       <View style={styles.weekdays}>
-        {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((letter, i) => (
+        {t().calendar.weekdays.map((letter, i) => (
           <Text key={`${letter}${i}`} variant="caption" tone="tertiary" center style={styles.cell}>{letter}</Text>
         ))}
       </View>
@@ -45,6 +48,8 @@ export function HistoryCalendar({ month, days, onSelect }: {
           if (!day) return <View key={`empty-${index}`} style={styles.cell} />;
           const thumb = day.submission?.thumbnailUrl;
           const openable = Boolean(day.submission?.photoUrl && onSelect);
+          const isToday = day.date === today;
+          const future = day.date > today;
           return (
             <View key={day.date} style={styles.cell}>
               <Pressable
@@ -56,17 +61,23 @@ export function HistoryCalendar({ month, days, onSelect }: {
                   { opacity: pressed ? 0.7 : 1 },
                   styles.day,
                   {
-                    borderColor: borderFor(day.outcome, theme),
-                    backgroundColor: theme.color.surface,
+                    borderColor: isToday && !thumb ? theme.color.accent : borderFor(day.outcome, theme),
+                    backgroundColor: future ? 'transparent' : theme.color.surface,
                     borderStyle: day.outcome === 'missed' ? 'dashed' : 'solid',
+                    borderWidth: thumb || isToday || day.outcome !== 'no_challenge' ? 1.5 : 1,
                   },
                 ]}
               >
                 {thumb ? (
                   <Image source={{ uri: thumb }} style={styles.thumb} contentFit="cover" transition={120} />
+                ) : day.outcome === 'protected' ? (
+                  <Icon name="shield" size={13} tone="streak" />
+                ) : day.outcome === 'reviewing' ? (
+                  <Icon name="eye" size={13} tone="secondary" />
                 ) : (
-                  <Text variant="caption" tone={day.outcome === 'no_challenge' ? 'tertiary' : 'secondary'}>
-                    {markFor(day.outcome) || String(Number(day.date.slice(-2)))}
+                  <Text variant="caption" tone={future ? 'tertiary' : isToday ? 'accent' : 'secondary'}
+                    style={future && styles.faint}>
+                    {String(Number(day.date.slice(-2)))}
                   </Text>
                 )}
               </Pressable>
@@ -76,10 +87,6 @@ export function HistoryCalendar({ month, days, onSelect }: {
       </View>
     </View>
   );
-}
-
-function markFor(outcome: DayOutcome): string {
-  return outcome === 'protected' ? '🛡️' : outcome === 'reviewing' ? '⏳' : '';
 }
 
 function labelFor(outcome: DayOutcome): string {
@@ -106,4 +113,5 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
   },
   thumb: { width: '100%', height: '100%' },
+  faint: { opacity: 0.45 },
 });

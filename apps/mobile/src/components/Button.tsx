@@ -12,6 +12,8 @@ interface Props {
   loading?: boolean;
   icon?: React.ReactNode;
   fullWidth?: boolean;
+  /** Sólo el icono, circular; `label` queda como etiqueta accesible. */
+  iconOnly?: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ interface Props {
  */
 export function Button({
   label, onPress, variant = 'primary', size = 'md',
-  disabled, loading, icon, fullWidth = true,
+  disabled, loading, icon, fullWidth = true, iconOnly = false,
 }: Props) {
   const theme = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
@@ -41,7 +43,7 @@ export function Button({
   const isInert = disabled || loading;
 
   return (
-    <Animated.View style={[{ transform: [{ scale }] }, fullWidth && { alignSelf: 'stretch' }]}>
+    <Animated.View style={[{ transform: [{ scale }] }, fullWidth && !iconOnly && { alignSelf: 'stretch' }]}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: isInert, busy: loading }}
@@ -52,7 +54,7 @@ export function Button({
         onPressOut={() => animate(1)}
         style={[
           styles.base,
-          size === 'lg' ? styles.lg : styles.md,
+          iconOnly ? styles.iconOnly : size === 'lg' ? styles.lg : styles.md,
           {
             backgroundColor: surface,
             borderColor: variant === 'ghost' ? theme.color.border : 'transparent',
@@ -66,7 +68,7 @@ export function Button({
         ) : (
           <View style={styles.content}>
             {icon}
-            <Text variant="label" tone={tone}>{label}</Text>
+            {iconOnly ? null : <Text variant="label" tone={tone}>{label}</Text>}
           </View>
         )}
       </Pressable>
@@ -78,5 +80,6 @@ const styles = StyleSheet.create({
   base: { borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   md: { paddingVertical: space.md, paddingHorizontal: space.xl, minHeight: 48 },
   lg: { paddingVertical: space.lg, paddingHorizontal: space.xxl, minHeight: 56 },
+  iconOnly: { width: 44, height: 44 },
   content: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
 });

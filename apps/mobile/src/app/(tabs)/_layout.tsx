@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
-import { space, useTheme } from '@/theme';
+import { fonts, space, useTheme } from '@/theme';
 import { t } from '@/i18n';
 
 /**
@@ -25,7 +25,7 @@ export default function TabsLayout() {
           borderTopColor: theme.color.border,
           paddingTop: space.xs,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontFamily: fonts.textSemibold, fontSize: 11 },
       }}
     >
       <Tabs.Screen

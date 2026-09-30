@@ -8,3 +8,6 @@ export * from './Screen';
 export * from './StreakBadge';
 export * from './Text';
 export * from './TextField';
+export * from './Icon';
+export * from './Avatar';
+export * from './ScreenHeader';

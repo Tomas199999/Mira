@@ -6,15 +6,27 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "EXPO_PUBLIC_ENV": "development" }
+      "env": {
+        "EXPO_PUBLIC_ENV": "development"
+      }
+    },
+    "development-simulator": {
+      "extends": "development",
+      "ios": {
+        "simulator": true
+      }
     },
     "preview": {
       "distribution": "internal",
-      "env": { "EXPO_PUBLIC_ENV": "preview" }
+      "env": {
+        "EXPO_PUBLIC_ENV": "preview"
+      }
     },
     "production": {
       "autoIncrement": true,
-      "env": { "EXPO_PUBLIC_ENV": "production" }
+      "env": {
+        "EXPO_PUBLIC_ENV": "production"
+      }
     }
   },
   "submit": {

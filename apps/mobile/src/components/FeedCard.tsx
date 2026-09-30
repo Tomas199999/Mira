@@ -4,8 +4,11 @@ import { Image } from 'expo-image';
 import type { ReactionType } from '@mira/shared';
 import type { FeedEntry } from '@/features/feed/api';
 import { react } from '@/features/feed/api';
-import { radius, space, useTheme } from '@/theme';
-import { StreakBadge } from './StreakBadge';
+import { t } from '@/i18n';
+import { timeAgo } from '@/i18n/time';
+import { fonts, radius, space, useTheme } from '@/theme';
+import { Avatar } from './Avatar';
+import { Icon } from './Icon';
 import { Text } from './Text';
 
 const REACTIONS: Array<{ type: ReactionType; emoji: string }> = [
@@ -19,8 +22,9 @@ const REACTIONS: Array<{ type: ReactionType; emoji: string }> = [
 /**
  * Una publicación del feed (§21).
  *
- * Sin comentarios y sin "me gusta" con contador visible: el producto es la
- * foto del día, no un hilo. Las reacciones son livianas a propósito.
+ * La foto ocupa el ancho entero y manda; el resto es una línea arriba (quién,
+ * cuándo) y una abajo (qué, reacciones). Sin comentarios y sin contadores
+ * grandes: el producto es la foto del día, no un hilo.
  */
 export function FeedCard({ entry }: { entry: FeedEntry }) {
   const theme = useTheme();
@@ -36,53 +40,73 @@ export function FeedCard({ entry }: { entry: FeedEntry }) {
     finally { setSending(false); }
   }
 
+  const streak = entry.author.currentStreak;
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
+        <Avatar name={entry.author.displayName || entry.author.username} size={36} />
         <View style={styles.headerText}>
           <Text variant="label">{entry.author.displayName}</Text>
-          <Text variant="caption" tone="tertiary">@{entry.author.username}</Text>
+          <Text variant="caption" tone="tertiary">
+            @{entry.author.username} · {timeAgo(entry.submission.submittedAt)}
+          </Text>
         </View>
-        <StreakBadge days={entry.author.currentStreak} />
+        {streak > 0 ? (
+          <View style={[styles.streak, { backgroundColor: theme.color.streakSoft }]}>
+            <Text style={{ fontFamily: fonts.displayBold, fontSize: 13, lineHeight: 16, color: theme.color.streak }}>
+              {streak}
+            </Text>
+            <Icon name="zap" size={12} tone="streak" />
+          </View>
+        ) : null}
       </View>
 
-      <Image
-        source={{ uri: entry.submission.photoUrl }}
-        style={[styles.photo, { backgroundColor: theme.color.surface }]}
-        contentFit="cover"
-        transition={180}
-        accessibilityLabel={entry.submission.objectDisplayName}
-      />
-
-      <View style={styles.footer}>
-        <Text variant="caption" tone="secondary">
-          📅 {entry.submission.objectDisplayName}
-          {entry.submission.wasLate ? ' · fuera de hora' : ''}
-        </Text>
-        <View style={styles.reactions}>
-          {REACTIONS.map(({ type, emoji }) => {
-            const count = entry.reactions.counts[type] ?? 0;
-            const active = mine === type;
-            return (
-              <Pressable
-                key={type}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                disabled={sending}
-                onPress={() => void toggle(type)}
-                style={[
-                  styles.reaction,
-                  {
-                    backgroundColor: active ? theme.color.surfaceRaised : 'transparent',
-                    borderColor: active ? theme.color.accent : theme.color.border,
-                  },
-                ]}
-              >
-                <Text variant="caption">{emoji}{count > 0 ? ` ${count}` : ''}</Text>
-              </Pressable>
-            );
-          })}
+      <View style={[styles.photoWrap, { backgroundColor: theme.color.surface }]}>
+        <Image
+          source={{ uri: entry.submission.photoUrl }}
+          style={styles.photo}
+          contentFit="cover"
+          transition={180}
+          accessibilityLabel={entry.submission.objectDisplayName}
+        />
+        <View style={[styles.objectTag, { backgroundColor: theme.color.scrim }]}>
+          <Icon name="target" size={12} color="#fff" />
+          <Text variant="caption" style={styles.objectText}>
+            {entry.submission.objectDisplayName}{entry.submission.wasLate ? ` · ${t().streak.late}` : ''}
+          </Text>
         </View>
+      </View>
+
+      <View style={styles.reactions}>
+        {REACTIONS.map(({ type, emoji }) => {
+          const base = entry.reactions.counts[type] ?? 0;
+          const count = base + (mine === type && entry.reactions.mine !== type ? 1 : 0)
+            - (mine !== type && entry.reactions.mine === type ? 1 : 0);
+          const active = mine === type;
+          return (
+            <Pressable
+              key={type}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              disabled={sending}
+              onPress={() => void toggle(type)}
+              style={({ pressed }) => [
+                styles.reaction,
+                {
+                  backgroundColor: active ? theme.color.accentSoft : theme.color.surface,
+                  borderColor: active ? theme.color.accent : 'transparent',
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+            >
+              <Text variant="caption">{emoji}</Text>
+              {count > 0 ? (
+                <Text variant="caption" tone={active ? 'accent' : 'secondary'} style={styles.count}>{count}</Text>
+              ) : null}
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
@@ -90,13 +114,21 @@ export function FeedCard({ entry }: { entry: FeedEntry }) {
 
 const styles = StyleSheet.create({
   card: { gap: space.sm, marginBottom: space.xl },
-  header: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  headerText: { flex: 1, gap: 2 },
-  photo: { width: '100%', aspectRatio: 3 / 4, borderRadius: radius.lg },
-  footer: { gap: space.sm },
-  reactions: { flexDirection: 'row', gap: space.xs, flexWrap: 'wrap' },
-  reaction: {
-    paddingVertical: space.xs, paddingHorizontal: space.sm,
-    borderRadius: radius.pill, borderWidth: 1,
+  header: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.xs },
+  headerText: { flex: 1, gap: 1 },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 4, paddingHorizontal: 9, borderRadius: radius.pill },
+  photoWrap: { borderRadius: radius.xl, overflow: 'hidden' },
+  photo: { width: '100%', aspectRatio: 4 / 5 },
+  objectTag: {
+    position: 'absolute', left: space.md, bottom: space.md,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 6, paddingHorizontal: 10, borderRadius: radius.pill,
   },
+  objectText: { color: '#fff' },
+  reactions: { flexDirection: 'row', gap: space.xs, paddingHorizontal: space.xs },
+  reaction: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingVertical: 6, paddingHorizontal: 10, borderRadius: radius.pill, borderWidth: 1,
+  },
+  count: { fontVariant: ['tabular-nums'] },
 });

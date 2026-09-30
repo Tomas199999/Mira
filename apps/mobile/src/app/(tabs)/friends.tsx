@@ -5,12 +5,14 @@ import {
   findContactsOnMira, getSocialGraph, respondToRequest, searchUsers, sendRequest,
   type PersonSummary, type SocialGraph,
 } from '@/features/friends/api';
-import { Button, EmptyState, Screen, Text, TextField } from '@/components';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Avatar, Button, EmptyState, Icon, Screen, ScreenHeader, Text, TextField } from '@/components';
 import { radius, space, useTheme } from '@/theme';
 import { t, tp } from '@/i18n';
 
 export default function FriendsScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const copy = t().friends;
 
   const [graph, setGraph] = useState<SocialGraph | null>(null);
@@ -85,14 +87,14 @@ export default function FriendsScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.color.background }}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + space.sm }]}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }}
           tintColor={theme.color.accent} />
       }
       keyboardShouldPersistTaps="handled"
     >
-      <Text variant="title">{copy.title}</Text>
+      <ScreenHeader title={copy.title} />
 
       <TextField
         label={copy.search}
@@ -102,18 +104,29 @@ export default function FriendsScreen() {
         autoCorrect={false}
       />
 
-      <Button
-        label={copy.findContacts}
-        variant="secondary"
-        onPress={findContacts}
-        loading={busy === 'contacts'}
-      />
-      <Text variant="caption" tone="tertiary">{copy.contactsPrivacy}</Text>
+      <View style={[styles.contacts, { backgroundColor: theme.color.surface }]}>
+        <View style={[styles.contactsIcon, { backgroundColor: theme.color.accentSoft }]}>
+          <Icon name="book" size={18} tone="accent" />
+        </View>
+        <View style={styles.contactsText}>
+          <Text variant="label">{copy.findContacts}</Text>
+          <Text variant="caption" tone="tertiary">{copy.contactsPrivacy}</Text>
+        </View>
+        <Button
+          label={copy.findContacts}
+          variant="primary"
+          onPress={findContacts}
+          loading={busy === 'contacts'}
+          fullWidth={false}
+          icon={<Icon name="search" size={14} tone="onAccent" />}
+          iconOnly
+        />
+      </View>
 
       {showing ? (
         <Section title={query.trim().length >= 2 ? copy.results : copy.fromContacts}>
           {showing.length === 0 ? (
-            <Text variant="caption" tone="tertiary">{copy.noResults}</Text>
+            <Text variant="caption" tone="tertiary" style={{ padding: space.md }}>{copy.noResults}</Text>
           ) : showing.map((person) => (
             <PersonRow
               key={person.userId}
@@ -142,7 +155,7 @@ export default function FriendsScreen() {
       <Section title={tp(t().profile, 'friendCount', friends.length)}>
         {friends.length === 0 ? (
           <EmptyState
-            icon="👥"
+            icon="users"
             title={t().empty.noFriendsTitle}
             body={t().empty.noFriendsBody}
           />
@@ -155,10 +168,11 @@ export default function FriendsScreen() {
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const theme = useTheme();
   return (
     <View style={styles.section}>
-      <Text variant="label" tone="secondary">{title.toUpperCase()}</Text>
-      {children}
+      <Text variant="overline" tone="tertiary" style={{ paddingHorizontal: space.xs }}>{title}</Text>
+      <View style={[styles.list, { backgroundColor: theme.color.surface }]}>{children}</View>
     </View>
   );
 }
@@ -175,7 +189,7 @@ function PersonRow({ person, busy, onAdd, onAccept, onReject }: {
 
   return (
     <View style={[styles.row, { borderColor: theme.color.border }]}>
-      <View style={[styles.avatar, { backgroundColor: theme.color.surface }]} />
+      <Avatar name={person.displayName || person.username} size={40} />
       <View style={styles.rowText}>
         <Text variant="label">{person.displayName}</Text>
         <Text variant="caption" tone="tertiary">@{person.username}</Text>
@@ -192,7 +206,12 @@ function PersonRow({ person, busy, onAdd, onAccept, onReject }: {
             </Pressable>
           </View>
         ) : person.relationship === 'friends' ? (
-          <Text variant="caption" tone="tertiary">✓</Text>
+          person.currentStreak ? (
+            <View style={styles.streak}>
+              <Text variant="label" tone="streak">{person.currentStreak}</Text>
+              <Icon name="zap" size={13} tone="streak" />
+            </View>
+          ) : <Icon name="check" size={16} tone="tertiary" />
         ) : person.relationship === 'pending_sent' ? (
           <Text variant="caption" tone="tertiary">{copy.pending}</Text>
         ) : onAdd ? (
@@ -205,14 +224,18 @@ function PersonRow({ person, busy, onAdd, onAccept, onReject }: {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: space.lg, paddingTop: space.xxxl, paddingBottom: space.huge, gap: space.lg },
-  section: { gap: space.sm, marginTop: space.lg },
+  content: { paddingHorizontal: space.lg, paddingBottom: space.huge, gap: space.md },
+  contacts: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg },
+  contactsIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  contactsText: { flex: 1, gap: 2 },
+  section: { gap: space.sm, marginTop: space.sm },
+  list: { borderRadius: radius.lg, overflow: 'hidden' },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
-    paddingVertical: space.md, borderBottomWidth: 1,
+    paddingVertical: space.sm + 2, paddingHorizontal: space.md, borderBottomWidth: 1,
   },
-  rowText: { flex: 1, gap: 2 },
+  rowText: { flex: 1, gap: 1 },
   rowActions: { flexDirection: 'row', gap: space.sm },
-  avatar: { width: 40, height: 40, borderRadius: 20 },
-  pill: { paddingVertical: space.xs, paddingHorizontal: space.md, borderRadius: radius.pill },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  pill: { paddingVertical: 6, paddingHorizontal: space.md, borderRadius: radius.pill },
 });

@@ -123,17 +123,37 @@ export const radius = {
 } as const;
 
 /**
- * Tipografía. Escala corta a propósito: seis tamaños alcanzan para toda la app,
- * y una escala corta es lo que hace que se vea consistente.
+ * Tipografía. Dos familias con un papel cada una:
+ *   · Bricolage Grotesque para lo que se lee de un vistazo: el objeto del
+ *     día, los títulos, la racha. Tiene carácter y aguanta el tamaño grande.
+ *   · Instrument Sans para todo lo demás: texto, etiquetas, botones. Neutra,
+ *     legible chica, con números tabulares decentes.
+ *
+ * En iOS un peso es una familia distinta, así que el peso va en el nombre y
+ * no en fontWeight. Los archivos se cargan en app/_layout.tsx.
+ *
+ * Escala corta a propósito: siete tamaños alcanzan para toda la app, y una
+ * escala corta es lo que hace que se vea consistente.
  */
+export const fonts = {
+  display: 'BricolageGrotesque_800ExtraBold',
+  displayBold: 'BricolageGrotesque_700Bold',
+  displayMedium: 'BricolageGrotesque_600SemiBold',
+  text: 'InstrumentSans_400Regular',
+  textMedium: 'InstrumentSans_500Medium',
+  textSemibold: 'InstrumentSans_600SemiBold',
+  textBold: 'InstrumentSans_700Bold',
+} as const;
+
 export const type = {
-  display: { fontSize: 40, lineHeight: 44, fontWeight: '800' },
-  title:   { fontSize: 28, lineHeight: 34, fontWeight: '700' },
-  heading: { fontSize: 20, lineHeight: 26, fontWeight: '700' },
-  body:    { fontSize: 16, lineHeight: 24, fontWeight: '400' },
-  label:   { fontSize: 14, lineHeight: 20, fontWeight: '600' },
-  caption: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
-  mono:    { fontSize: 32, lineHeight: 36, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  display: { fontFamily: fonts.display, fontSize: 40, lineHeight: 44, letterSpacing: -0.8 },
+  title:   { fontFamily: fonts.displayBold, fontSize: 28, lineHeight: 33, letterSpacing: -0.4 },
+  heading: { fontFamily: fonts.displayBold, fontSize: 20, lineHeight: 25, letterSpacing: -0.2 },
+  body:    { fontFamily: fonts.text, fontSize: 16, lineHeight: 24 },
+  label:   { fontFamily: fonts.textSemibold, fontSize: 14, lineHeight: 20 },
+  caption: { fontFamily: fonts.textMedium, fontSize: 13, lineHeight: 18 },
+  overline:{ fontFamily: fonts.textSemibold, fontSize: 11, lineHeight: 14, letterSpacing: 1.2, textTransform: 'uppercase' },
+  mono:    { fontFamily: fonts.display, fontSize: 32, lineHeight: 36, fontVariant: ['tabular-nums'] },
 } as const;
 
 /** Duraciones de animación (§41): rápidas. Nada por encima de 300ms. */
