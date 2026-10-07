@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import type { ReactionType } from '@mira/shared';
@@ -28,15 +28,21 @@ const REACTIONS: Array<{ type: ReactionType; emoji: string }> = [
  */
 export function FeedCard({ entry }: { entry: FeedEntry }) {
   const theme = useTheme();
-  const [mine, setMine] = useState<ReactionType | null>(entry.reactions.mine);
+  const serverMine = entry.reactions.mine;
+  const [mine, setMine] = useState<ReactionType | null>(serverMine);
   const [sending, setSending] = useState(false);
+
+  // El estado local existe sólo para que la reacción se sienta instantánea.
+  // Cuando llega el dato de verdad, manda el servidor: sin esto, al volver al
+  // feed la reacción ya guardada aparecía sin marcar y sin contar.
+  useEffect(() => { setMine(serverMine); }, [serverMine, entry.submission.id]);
 
   async function toggle(type: ReactionType) {
     const next = mine === type ? null : type;
     setMine(next);            // optimista: la reacción tiene que sentirse instantánea
     setSending(true);
     try { await react(entry.submission.id, next); }
-    catch { setMine(entry.reactions.mine); }   // si falla, se revierte
+    catch { setMine(serverMine); }   // si falla, se revierte
     finally { setSending(false); }
   }
 
@@ -80,9 +86,10 @@ export function FeedCard({ entry }: { entry: FeedEntry }) {
 
       <View style={styles.reactions}>
         {REACTIONS.map(({ type, emoji }) => {
+          // El conteo del servidor ya incluye la reacción propia; el delta
+          // corrige sólo mientras el cambio local todavía no viajó.
           const base = entry.reactions.counts[type] ?? 0;
-          const count = base + (mine === type && entry.reactions.mine !== type ? 1 : 0)
-            - (mine !== type && entry.reactions.mine === type ? 1 : 0);
+          const count = base + (mine === type ? 1 : 0) - (serverMine === type ? 1 : 0);
           const active = mine === type;
           return (
             <Pressable

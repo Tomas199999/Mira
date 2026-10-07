@@ -30,7 +30,9 @@
     "demo": "node scripts/demo.mjs",
     "demo:abrir": "node --env-file=.env scripts/demo-helpers.mjs abrir",
     "demo:admin": "node --env-file=.env scripts/demo-helpers.mjs admin",
-    "demo:push": "node --env-file=.env scripts/demo-helpers.mjs push"
+    "demo:push": "node --env-file=.env scripts/demo-helpers.mjs push",
+    "demo:amigo": "node --env-file=.env scripts/demo-helpers.mjs amigo",
+    "demo:limpiar": "node --env-file=.env scripts/demo-helpers.mjs limpiar"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",
