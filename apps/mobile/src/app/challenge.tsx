@@ -34,7 +34,7 @@ export default function ChallengeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state } = useChallengeState();
+  const { state, reload } = useChallengeState();
   const [permission, requestPermission] = useCameraPermissions();
   const [phase, setPhase] = useState<Phase>({ step: 'camera' });
   const [facing, setFacing] = useState<'back' | 'front'>('back');
@@ -124,6 +124,8 @@ export default function ChallengeScreen() {
 
       {/* Velos: arriba para el objeto, abajo para los controles */}
       <View style={[styles.veilTop, { paddingTop: insets.top + space.sm }]}>
+        {/* El reloj va centrado en la pantalla, no entre dos bloques de ancho
+            distinto: por eso está en su propia capa. */}
         <View style={styles.topRow}>
           <Pressable
             accessibilityRole="button"
@@ -134,13 +136,11 @@ export default function ChallengeScreen() {
           >
             <Icon name="x" size={20} color="#fff" />
           </Pressable>
-          <View style={styles.countdownPill}>
-            <Icon name="clock" size={13} color="#fff" />
-            <Countdown until={open.closesAt} />
-          </View>
-          <View style={styles.attempts}>
-            <Text variant="caption" style={styles.dim}>{copy.attempts}</Text>
-            <Text style={styles.attemptsValue}>{remaining}/{open.maxAttempts}</Text>
+          <View pointerEvents="none" style={styles.countdownWrap}>
+            <View style={styles.countdownPill}>
+              <Icon name="clock" size={13} color="#fff" />
+              <Countdown until={open.closesAt} onExpire={reload} />
+            </View>
           </View>
         </View>
 
@@ -173,7 +173,13 @@ export default function ChallengeScreen() {
       <View style={[styles.controls, { paddingBottom: insets.bottom + space.lg }]}>
         {phase.step === 'camera' ? (
           <View style={styles.shutterRow}>
-            <View style={styles.side} />
+            <View style={styles.side}>
+              {/* Los intentos son información del disparo: van donde se dispara. */}
+              <View style={styles.attempts}>
+                <Text style={styles.attemptsValue}>{remaining}</Text>
+                <Text variant="caption" style={styles.dim}>/{open.maxAttempts}</Text>
+              </View>
+            </View>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t().home.openCamera}
@@ -289,11 +295,12 @@ const styles = StyleSheet.create({
   gateActions: { alignSelf: 'stretch', gap: space.sm, marginTop: space.lg },
 
   veilTop: { paddingHorizontal: space.lg, paddingBottom: space.lg, backgroundColor: 'rgba(0,0,0,0.45)' },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  topRow: { flexDirection: 'row', alignItems: 'center', minHeight: 40 },
+  countdownWrap: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   glassButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: GLASS },
   countdownPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: GLASS },
-  attempts: { alignItems: 'flex-end', minWidth: 40 },
-  attemptsValue: { fontFamily: fonts.displayBold, fontSize: 14, lineHeight: 18, color: '#fff', fontVariant: ['tabular-nums'] },
+  attempts: { flexDirection: 'row', alignItems: 'baseline', gap: 1 },
+  attemptsValue: { fontFamily: fonts.displayBold, fontSize: 18, lineHeight: 22, color: '#fff', fontVariant: ['tabular-nums'] },
 
   target: { alignItems: 'center', marginTop: space.lg, gap: 2 },
   object: { fontFamily: fonts.display, fontSize: 34, lineHeight: 38, letterSpacing: -0.8, color: '#fff', textAlign: 'center' },
@@ -308,7 +315,7 @@ const styles = StyleSheet.create({
 
   controls: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.lg, paddingTop: space.lg },
   shutterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  side: { width: 40, alignItems: 'center' },
+  side: { width: 44, alignItems: 'center', justifyContent: 'center' },
   shutter: { width: 76, height: 76, borderRadius: 38, borderWidth: 4, alignItems: 'center', justifyContent: 'center' },
   shutterInner: { width: 58, height: 58, borderRadius: 29 },
   stack: { gap: space.sm },

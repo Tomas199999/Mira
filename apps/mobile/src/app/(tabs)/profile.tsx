@@ -82,20 +82,21 @@ export default function ProfileScreen() {
       {/* Racha: la pieza principal del perfil */}
       <Card raised style={styles.streakCard}>
         <View style={styles.streakRow}>
-          <View style={[styles.flame, { backgroundColor: theme.color.streakSoft }]}>
-            <Icon name="zap" size={26} tone="streak" />
+          <View style={[styles.flame, { backgroundColor: theme.color.surfaceRaised, borderColor: theme.color.streak }]}>
+            <Icon name="zap" size={24} tone="streak" />
           </View>
           <View style={styles.streakText}>
             <Text style={[styles.streakNumber, { color: theme.color.textPrimary }]}>{streak}</Text>
             <Text variant="label" tone="secondary">{tp(copy, 'streakDays', streak)}</Text>
           </View>
-          {stats?.protections ? (
-            <View style={[styles.shield, { backgroundColor: theme.color.surface }]}>
-              <Icon name="shield" size={14} tone="secondary" />
-              <Text variant="caption" tone="secondary">{tp(copy, 'protections', stats.protections)}</Text>
-            </View>
-          ) : null}
+          <LastSevenDays days={days} />
         </View>
+        {stats?.protections ? (
+          <View style={[styles.shield, { backgroundColor: theme.color.surface }]}>
+            <Icon name="shield" size={14} tone="secondary" />
+            <Text variant="caption" tone="secondary">{tp(copy, 'protections', stats.protections)}</Text>
+          </View>
+        ) : null}
       </Card>
 
       {/* Números */}
@@ -172,6 +173,44 @@ export default function ProfileScreen() {
   );
 }
 
+/**
+ * Los últimos siete días, uno por punto. Es el dato que da sentido al número
+ * de al lado: una racha de 3 se lee distinto si los cuatro días previos se
+ * perdieron. Se dibuja con lo que ya trajo el historial, sin pedir nada más.
+ */
+function LastSevenDays({ days }: { days: HistoryDay[] }) {
+  const theme = useTheme();
+  const today = new Date().toISOString().slice(0, 10);
+  const byDate = new Map(days.map((d) => [d.date, d]));
+
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(`${today}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - (6 - i));
+    return byDate.get(d.toISOString().slice(0, 10))?.outcome ?? 'no_challenge';
+  });
+
+  return (
+    <View style={styles.week}>
+      {week.map((outcome, i) => {
+        const filled = outcome === 'completed' || outcome === 'late';
+        return (
+          <View
+            key={i}
+            style={[styles.dot, {
+              backgroundColor: filled ? theme.color.accent
+                : outcome === 'protected' ? theme.color.streak
+                : 'transparent',
+              borderColor: filled || outcome === 'protected'
+                ? 'transparent'
+                : outcome === 'missed' ? theme.color.border : theme.color.surfaceRaised,
+            }]}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
 function Tile({ label, value }: { label: string; value: number }) {
   const theme = useTheme();
   return (
@@ -209,10 +248,12 @@ const styles = StyleSheet.create({
 
   streakCard: { padding: space.lg },
   streakRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  flame: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  flame: { width: 56, height: 56, borderRadius: 28, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   streakText: { flex: 1 },
+  week: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  dot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1.5 },
   streakNumber: { fontFamily: fonts.display, fontSize: 44, lineHeight: 48, letterSpacing: -1.5, fontVariant: ['tabular-nums'] },
-  shield: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 10, borderRadius: radius.pill },
+  shield: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 10, borderRadius: radius.pill, alignSelf: 'flex-start', marginTop: space.md },
 
   tiles: { flexDirection: 'row', gap: space.sm },
   tile: { flex: 1, borderRadius: radius.lg, padding: space.md, gap: 2 },

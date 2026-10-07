@@ -71,7 +71,7 @@ export default function HomeScreen() {
             <Text style={[styles.wordmark, { color: theme.color.textPrimary }]}>mira</Text>
             <Text variant="caption" tone="tertiary">{formatToday()}</Text>
           </View>
-          <ChallengeCard state={state} />
+          <ChallengeCard state={state} onExpire={reload} />
           <View style={styles.sectionRow}>
             <Text variant="heading">{t().tabs.friends}</Text>
             {feed.length > 0 ? (
@@ -108,7 +108,7 @@ function formatToday(): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-function ChallengeCard({ state }: { state: ChallengeState }) {
+function ChallengeCard({ state, onExpire }: { state: ChallengeState; onExpire: () => void }) {
   const theme = useTheme();
   const router = useRouter();
   const copy = t().home;
@@ -137,7 +137,10 @@ function ChallengeCard({ state }: { state: ChallengeState }) {
               <View style={[styles.liveDot, { backgroundColor: theme.color.accent }]} />
               <Text variant="overline" tone="accent">{copy.openTitle}</Text>
             </View>
-            <Countdown until={state.closesAt} />
+            {/* Al llegar a cero no se asume nada: se le vuelve a preguntar al
+                servidor. Sin esto la tarjeta seguía ofreciendo la cámara con
+                el reloj en 00:00:00, y el intento fallaba contra la API. */}
+            <Countdown until={state.closesAt} onExpire={onExpire} />
           </View>
           <Text variant="caption" tone="secondary">{copy.photograph}</Text>
           <Text variant="display">{state.objectDisplayName}</Text>

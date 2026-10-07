@@ -63,7 +63,8 @@ export function HistoryCalendar({ month, days, onSelect }: {
                   {
                     borderColor: isToday && !thumb ? theme.color.accent : borderFor(day.outcome, theme),
                     backgroundColor: future ? 'transparent' : theme.color.surface,
-                    borderStyle: day.outcome === 'missed' ? 'dashed' : 'solid',
+                    // Un día que todavía no terminó no es un día perdido.
+                    borderStyle: day.outcome === 'missed' && !isToday ? 'dashed' : 'solid',
                     borderWidth: thumb || isToday || day.outcome !== 'no_challenge' ? 1.5 : 1,
                   },
                 ]}

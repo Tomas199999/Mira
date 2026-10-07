@@ -4,8 +4,11 @@ import { elevation, radius, space, useTheme } from '@/theme';
 
 /**
  * Dos niveles y nada más. Una tarjeta plana separa contenido; una `raised`
- * es LA tarjeta de la pantalla: borde teñido con el acento, sombra y un
- * brillo detrás. Si dos cosas sobresalen, no sobresale ninguna.
+ * es LA tarjeta de la pantalla: fondo un tono más claro, borde teñido con el
+ * acento y sombra. Si dos cosas sobresalen, no sobresale ninguna.
+ *
+ * Sin degradados: React Native no los trae, y el círculo que se usaba para
+ * simular el brillo se veía como una mancha con borde duro, no como luz.
  */
 export function Card({ children, style, raised = false }: {
   children: ReactNode; style?: ViewStyle; raised?: boolean;
@@ -21,9 +24,6 @@ export function Card({ children, style, raised = false }: {
       raised && elevation.card,
       style,
     ]}>
-      {raised ? (
-        <View pointerEvents="none" style={[styles.glow, { backgroundColor: theme.color.accentSoft }]} />
-      ) : null}
       {children}
     </View>
   );
@@ -31,10 +31,4 @@ export function Card({ children, style, raised = false }: {
 
 const styles = StyleSheet.create({
   card: { borderRadius: radius.lg, borderWidth: 1, padding: space.lg, overflow: 'hidden' },
-  // Un círculo grande y desenfocado por el propio borde redondeado: el brillo
-  // asoma por arriba de la tarjeta sin necesitar un gradiente nativo.
-  glow: {
-    position: 'absolute', top: -140, alignSelf: 'center',
-    width: 320, height: 260, borderRadius: 160,
-  },
 });
