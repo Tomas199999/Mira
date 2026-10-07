@@ -171,6 +171,11 @@ Están razonadas en `docs/`. Cambiarlas es una conversación, no un commit.
 - Antes de abrir el PR: `npm run verify:schema && npm run typecheck` en verde.
 - Los textos de la interfaz van en `apps/mobile/src/i18n/`, nunca escritos
   dentro de un componente.
+- **Nada de emojis como iconografía**: hay un solo set detrás de `<Icon>`.
+  Las reacciones del feed son la excepción, porque ahí el emoji es el
+  contenido. Ver `docs/BRAND.md`.
+- Ningún componente escribe `fontSize` ni colores a mano: todo sale de
+  `theme/tokens.ts` y de `<Text variant>`.
 - Los mensajes de error que ve el usuario nunca mencionan códigos ni detalles
   técnicos. Comparar con `i18n/es.ts § errors`.
 
@@ -194,4 +199,5 @@ otro archivo.
 | `docs/COSTS.md` | qué gasta plata y cómo se controla |
 | `docs/DEPLOYMENT.md` | base, backend, builds |
 | `docs/ENVIRONMENT.md` | variables de entorno y dónde vive cada una |
+| `docs/BRAND.md` | paleta, tipografías, iconografía y el ícono |
 | `docs/APP_STORE.md` · `docs/PLAY_STORE.md` | permisos, UGC, privacidad |
